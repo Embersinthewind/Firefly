@@ -5,13 +5,63 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="robots" content="noindex, nofollow, noarchive" />
 		<meta name="referrer" content="same-origin" />
-		<title>Firefly 内容管理</title>
+		<meta name="theme-color" content="#34b78f" />
+		<title>Yiyu 内容工作台</title>
+		<style>
+			.cms-site-link {
+				position: fixed;
+				inset-inline-start: 1rem;
+				inset-block-end: 1rem;
+				z-index: 120;
+				display: inline-flex;
+				align-items: center;
+				gap: 0.45rem;
+				border-radius: 999px;
+				padding: 0.55rem 0.85rem;
+				background: oklch(0.7 0.14 165);
+				color: oklch(0.18 0.02 165);
+				font: 650 0.8125rem/1.2 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+				text-decoration: none;
+				transition: filter 180ms ease-out, transform 180ms ease-out;
+			}
+
+			.cms-site-link:hover {
+				filter: brightness(1.04);
+				transform: translateY(-1px);
+			}
+
+			.cms-site-link:focus-visible {
+				outline: 2px solid currentColor;
+				outline-offset: 3px;
+			}
+
+			@media (prefers-reduced-motion: reduce) {
+				.cms-site-link {
+					transition: none;
+				}
+			}
+		</style>
 	</head>
-	<body>
+	<body class="firefly-admin">
 		<noscript>内容管理后台需要启用 JavaScript。</noscript>
+		<a class="cms-site-link" href="/?author=1" aria-label="返回网站并开启作者模式">
+			<span aria-hidden="true">←</span>
+			返回网站
+		</a>
 		<script
 			data-cfasync="false"
 			src="https://unpkg.com/@sveltia/cms@0.170.8/dist/sveltia-cms.js"
 		></script>
+		<script>
+			if (window.CMS) {
+				window.CMS.registerPreviewStyle("/admin-theme.css");
+				window.CMS.registerEventListener({
+					name: "postSave",
+					handler: function () {
+						localStorage.setItem("firefly-author-mode", "true");
+					},
+				});
+			}
+		</script>
 	</body>
 </html>

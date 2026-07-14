@@ -1,18 +1,32 @@
 # yaml-language-server: $schema=https://unpkg.com/@sveltia/cms/schema/sveltia-cms.json
 
+site_url: https://yiyu.asia
+display_url: https://yiyu.asia
+logout_redirect_url: https://yiyu.asia/
+app_title: Yiyu 内容工作台
+logo:
+  src: /favicon/favicon-light-192.png
+  show_in_header: true
+
 backend:
   name: github
   repo: Embersinthewind/Firefly
   branch: main
   base_url: https://sveltia-cms-auth.yiyu4755.workers.dev
-  # Keep token login as a fallback until OAuth is verified end-to-end.
-  auth_methods: [oauth, token]
+  auth_methods: [oauth]
   commit_messages:
     create: 'feat(content): create {{collection}} "{{slug}}"'
     update: 'chore(content): update {{collection}} "{{slug}}"'
     delete: 'chore(content): delete {{collection}} "{{slug}}"'
     uploadMedia: 'chore(media): upload "{{path}}"'
     deleteMedia: 'chore(media): delete "{{path}}"'
+
+field_defaults:
+  richtext:
+    modes: [raw, rich_text]
+    editor_components: [code-block, image]
+    use_markdown_shortcuts: true
+    sanitize_preview: true
 
 media_folder: /public/uploads
 public_folder: /uploads
@@ -48,6 +62,8 @@ collections:
     extension: md
     create: true
     duplicate: true
+    editor:
+      preview: true
     slug: '{{fields._slug}}'
     preview_path: 'posts/{{slug}}/'
     summary: '{{title}} · {{published}}'
@@ -149,10 +165,14 @@ collections:
         widget: string
         required: false
       - name: body
-        label: 正文
+        label: Markdown 正文
         widget: richtext
         required: true
+        modes: [raw, rich_text]
+        editor_components: [code-block, image]
+        use_markdown_shortcuts: true
         sanitize_preview: true
+        hint: 默认使用原始 Markdown 模式；可在工具栏切换为富文本模式。支持拖放或粘贴图片、代码块、标题、列表和引用。
 
   - divider: true
 
@@ -162,6 +182,113 @@ collections:
     editor:
       preview: false
     files:
+      - name: site
+        label: 网站基础设置
+        file: /src/data/site.json
+        format: json
+        fields:
+          - name: title
+            label: 网站名称
+            widget: string
+            minlength: 1
+          - name: subtitle
+            label: 网站副标题
+            widget: string
+            required: false
+          - name: siteUrl
+            label: 网站地址
+            widget: string
+            pattern:
+              - '^https://[^\s]+$'
+              - 请输入完整的 HTTPS 地址，例如 https://yiyu.asia
+            hint: 只影响站点链接、SEO、RSS 等元数据，不会修改 Cloudflare 域名绑定。
+          - name: description
+            label: 网站描述
+            widget: text
+            required: false
+            maxlength: 320
+          - name: keywords
+            label: SEO 关键词
+            label_singular: 关键词
+            widget: list
+            required: false
+          - name: siteStartDate
+            label: 建站日期
+            widget: datetime
+            type: date
+            format: YYYY-MM-DD
+          - name: theme
+            label: 主题
+            widget: object
+            fields:
+              - name: hue
+                label: 主题色色相
+                widget: number
+                value_type: int
+                min: 0
+                max: 360
+                hint: 0 为红色，165 为当前绿色，250 为蓝色，345 为粉色。
+              - name: fixed
+                label: 锁定主题色
+                widget: boolean
+                default: false
+                hint: 开启后访问者不能自行切换主题色。
+              - name: defaultMode
+                label: 默认明暗模式
+                widget: select
+                options:
+                  - { label: 跟随系统, value: system }
+                  - { label: 浅色, value: light }
+                  - { label: 深色, value: dark }
+          - name: navbar
+            label: 导航栏
+            widget: object
+            fields:
+              - name: title
+                label: 导航栏标题
+                widget: string
+                required: false
+                hint: 留空时使用网站名称。
+              - name: logo
+                label: 导航栏 Logo
+                widget: object
+                fields:
+                  - name: type
+                    label: Logo 类型
+                    widget: select
+                    options:
+                      - { label: 项目图片, value: image }
+                      - { label: 网络图片, value: url }
+                      - { label: Iconify 图标, value: icon }
+                  - name: value
+                    label: 图片路径或图标名称
+                    widget: string
+                    hint: 项目图片示例 assets/images/firefly.png；图标示例 material-symbols:edit。
+                  - name: alt
+                    label: 替代文字
+                    widget: string
+                    required: false
+          - name: layout
+            label: 首页与列表
+            widget: object
+            fields:
+              - name: pageWidth
+                label: 页面最大宽度（rem）
+                widget: number
+                value_type: int
+                min: 60
+                max: 140
+              - name: categoryBar
+                label: 显示分类快捷栏
+                widget: boolean
+                default: true
+              - name: postsPerPage
+                label: 每页文章数量
+                widget: number
+                value_type: int
+                min: 1
+                max: 50
+
       - name: profile
         label: 个人资料
         file: /src/data/profile.json
