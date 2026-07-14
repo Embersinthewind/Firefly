@@ -1,5 +1,5 @@
 ---
-title: 草稿示例
+title: 草稿示例新的更新
 published: 1970-01-01
 tags:
   - Markdown
