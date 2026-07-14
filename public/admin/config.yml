@@ -4,9 +4,9 @@ backend:
   name: github
   repo: Embersinthewind/Firefly
   branch: main
-  # OAuth requires a per-site Cloudflare Worker URL. Keep token login enabled
-  # until `base_url` is configured as described in docs/admin-cms.md.
-  auth_methods: [token]
+  base_url: https://sveltia-cms-auth.yiyu4755.workers.dev
+  # Keep token login as a fallback until OAuth is verified end-to-end.
+  auth_methods: [oauth, token]
   commit_messages:
     create: 'feat(content): create {{collection}} "{{slug}}"'
     update: 'chore(content): update {{collection}} "{{slug}}"'
