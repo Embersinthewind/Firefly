@@ -1,0 +1,5 @@
+/admin/*
+  Cache-Control: no-cache, no-store, must-revalidate
+  Referrer-Policy: same-origin
+  X-Content-Type-Options: nosniff
+  X-Robots-Tag: noindex, nofollow, noarchive

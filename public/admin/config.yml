@@ -1,0 +1,232 @@
+# yaml-language-server: $schema=https://unpkg.com/@sveltia/cms/schema/sveltia-cms.json
+
+backend:
+  name: github
+  repo: Embersinthewind/Firefly
+  branch: main
+  # OAuth requires a per-site Cloudflare Worker URL. Keep token login enabled
+  # until `base_url` is configured as described in docs/admin-cms.md.
+  auth_methods: [token]
+  commit_messages:
+    create: 'feat(content): create {{collection}} "{{slug}}"'
+    update: 'chore(content): update {{collection}} "{{slug}}"'
+    delete: 'chore(content): delete {{collection}} "{{slug}}"'
+    uploadMedia: 'chore(media): upload "{{path}}"'
+    deleteMedia: 'chore(media): delete "{{path}}"'
+
+media_folder: /public/uploads
+public_folder: /uploads
+
+media_libraries:
+  default:
+    config:
+      max_file_size: 10485760
+      slugify_filename: true
+
+output:
+  omit_empty_optional_fields: true
+  json:
+    indent_style: tab
+    indent_size: 1
+  yaml:
+    quote: none
+    indent_size: 2
+    indent_sequences: true
+
+slug:
+  encoding: unicode
+  clean_accents: true
+  sanitize_replacement: '-'
+
+collections:
+  - name: posts
+    label: 文章
+    label_singular: 文章
+    icon: article
+    folder: /src/content/posts
+    format: yaml-frontmatter
+    extension: md
+    create: true
+    duplicate: true
+    slug: '{{fields._slug}}'
+    preview_path: 'posts/{{slug}}/'
+    summary: '{{title}} · {{published}}'
+    sortable_fields: [published, updated, title, category, author, slug]
+    view_filters:
+      - label: 草稿
+        field: draft
+        pattern: true
+      - label: 已发布
+        field: draft
+        pattern: false
+      - label: 置顶
+        field: pinned
+        pattern: true
+    media_folder: /public/uploads/posts
+    public_folder: /uploads/posts
+    fields:
+      - name: title
+        label: 标题
+        widget: string
+        minlength: 1
+      - name: published
+        label: 发布日期
+        widget: datetime
+        type: date
+        format: YYYY-MM-DD
+        default: '{{now}}'
+      - name: updated
+        label: 更新日期
+        widget: datetime
+        type: date
+        format: YYYY-MM-DD
+        required: false
+      - name: description
+        label: 摘要
+        widget: text
+        required: false
+        maxlength: 320
+      - name: image
+        label: 封面图片
+        widget: image
+        required: false
+        hint: 可上传图片，也可保留已有的相对路径或远程 URL。
+      - name: tags
+        label: 标签
+        widget: list
+        required: false
+        default: []
+      - name: category
+        label: 分类
+        widget: string
+        required: false
+      - name: draft
+        label: 草稿
+        widget: boolean
+        default: true
+      - name: pinned
+        label: 置顶
+        widget: boolean
+        default: false
+      - name: lang
+        label: 文章语言
+        widget: select
+        required: false
+        options:
+          - { label: 跟随站点, value: '' }
+          - { label: 简体中文, value: zh-CN }
+          - { label: 繁体中文, value: zh-TW }
+          - { label: English, value: en }
+          - { label: 日本語, value: ja }
+          - { label: Русский, value: ru }
+      - name: author
+        label: 作者
+        widget: string
+        required: false
+      - name: comment
+        label: 开启评论
+        widget: boolean
+        default: true
+      - name: sourceLink
+        label: 来源链接
+        widget: string
+        required: false
+      - name: licenseName
+        label: 许可证名称
+        widget: string
+        required: false
+      - name: licenseUrl
+        label: 许可证链接
+        widget: string
+        required: false
+      - name: password
+        label: 访问密码
+        widget: string
+        required: false
+        hint: 当前主题会把该值写入文章 Frontmatter，请勿使用其他账户的真实密码。
+      - name: passwordHint
+        label: 密码提示
+        widget: string
+        required: false
+      - name: body
+        label: 正文
+        widget: richtext
+        required: true
+        sanitize_preview: true
+
+  - divider: true
+
+  - name: settings
+    label: 站点设置
+    icon: settings
+    editor:
+      preview: false
+    files:
+      - name: profile
+        label: 个人资料
+        file: /src/data/profile.json
+        format: json
+        media_folder: /public/uploads/profile
+        public_folder: /uploads/profile
+        fields:
+          - name: avatar
+            label: 头像
+            widget: image
+            required: false
+          - name: name
+            label: 名称
+            widget: string
+            minlength: 1
+          - name: bio
+            label: 个人简介
+            widget: text
+            required: false
+            maxlength: 240
+          - name: links
+            label: 社交链接
+            label_singular: 社交链接
+            widget: list
+            required: false
+            fields:
+              - name: name
+                label: 名称
+                widget: string
+              - name: icon
+                label: Iconify 图标
+                widget: string
+                hint: 例如 fa7-brands:github
+              - name: url
+                label: 链接
+                widget: string
+                hint: "支持 https://、mailto: 和站内相对路径。"
+              - name: showName
+                label: 显示名称
+                widget: boolean
+                default: false
+
+  - name: pages
+    label: 独立页面
+    icon: web
+    files:
+      - name: about
+        label: 关于页面
+        file: /src/content/spec/about.md
+        format: raw
+        fields:
+          - name: body
+            label: 正文
+            widget: richtext
+      - name: guestbook
+        label: 留言板说明
+        file: /src/content/spec/guestbook.md
+        format: yaml-frontmatter
+        fields:
+          - name: title
+            label: 标题
+            widget: string
+          - name: description
+            label: 简介
+            widget: text
+          - name: body
+            label: 正文
+            widget: richtext
