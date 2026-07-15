@@ -1590,6 +1590,7 @@ function disableAnimation() {
   // 更新侧边栏组件的可见性
   function updateSidebarComponentsVisibility() {
     const isPostPage = isCurrentPagePost();
+    const isWritePage = window.location.pathname.startsWith("/write");
 
     // 处理侧边栏级别的 hideSidebarOnPostPage 配置
     document.querySelectorAll<HTMLElement>("[data-hide-sidebar-on-post]").forEach((wrapper) => {
@@ -1609,6 +1610,14 @@ function disableAnimation() {
     // 处理 hideOnNonPostPage === true 的组件
     document.querySelectorAll(".widget-hide-on-non-post").forEach((widget) => {
       !isPostPage ? widget.classList.add("hidden") : widget.classList.remove("hidden");
+    });
+
+    document.querySelectorAll(".widget-show-on-write-only").forEach((widget) => {
+      !isWritePage ? widget.classList.add("hidden") : widget.classList.remove("hidden");
+    });
+
+    document.querySelectorAll(".widget-hide-on-write").forEach((widget) => {
+      isWritePage ? widget.classList.add("hidden") : widget.classList.remove("hidden");
     });
 
     // 组件可见性变化后，立即重算 sticky 间距，避免 swup 切页后残留旧间距

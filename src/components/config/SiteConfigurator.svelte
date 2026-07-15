@@ -450,11 +450,8 @@ onMount(() => {
 					<label class="check"><input type="checkbox" bind:checked={portfolio.github.showForks} />展示参与或 Fork 的项目</label>
 				</div>
 				<div class="config-section">
-					<header><h2>项目查看方式</h2><p>访客可以在项目网格与分类视图之间切换。</p></header>
-					<div class="form-grid two">
-						<label>默认视图<select bind:value={portfolio.github.defaultView}><option value="grid">项目列表</option><option value="categories">分类查看</option></select></label>
-						<label>每行项目数<select bind:value={portfolio.github.gridColumns}><option value={2}>2 个</option><option value={3}>3 个</option></select></label>
-					</div>
+					<header><h2>项目分类展示</h2><p>主页固定使用分类查看，可设置每行项目数与自定义分类。</p></header>
+					<label>每行项目数<select bind:value={portfolio.github.gridColumns}><option value={2}>2 个</option><option value={3}>3 个</option></select></label>
 					<label>项目分类（逗号分隔）<input value={portfolio.github.categories.join(", ")} oninput={(event) => (portfolio.github.categories = event.currentTarget.value.split(",").map((item) => item.trim()).filter(Boolean))} /></label>
 				</div>
 				<div class="config-section">

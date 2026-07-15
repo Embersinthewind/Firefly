@@ -76,7 +76,6 @@
 				"topics": ["Java", "生活服务"]
 			}
 		],
-		"defaultView": "grid",
 		"gridColumns": 2,
 		"categories": ["参与项目", "个人项目", "学习项目"],
 		"projectMeta": [

@@ -28,6 +28,7 @@ export interface Props {
 	minutes?: number;
 	showWords?: boolean;
 	showReadingTime?: boolean;
+	views?: number;
 }
 
 const {
@@ -51,6 +52,7 @@ const {
 	minutes,
 	showWords = false,
 	showReadingTime = false,
+	views,
 } = Astro.props;
 
 const path = customPath || (id ? `/posts/${id}` : "");
@@ -175,7 +177,20 @@ const visibleTags =
   }
 
   {
+	!isHome && typeof views === "number" && (
+		<div class="flex items-center">
+			<div class="meta-icon">
+				<Icon is:inline name="material-symbols:visibility-outline-rounded" class="text-xl" />
+			</div>
+			<span class="text-50 text-sm font-medium mr-1">{i18n(I18nKey.pageViews)}</span>
+			<span class="text-50 text-sm font-medium">{views.toLocaleString()}</span>
+		</div>
+	)
+  }
+
+  {
     !isHome &&
+	  typeof views !== "number" &&
       commentConfig.type === "twikoo" &&
       commentConfig.twikoo?.visitorCount &&
       id && (
@@ -199,6 +214,7 @@ const visibleTags =
 
   {
     !isHome &&
+	  typeof views !== "number" &&
       commentConfig.type === "waline" &&
       commentConfig.waline?.visitorCount &&
       id && (
@@ -225,6 +241,7 @@ const visibleTags =
 
   {
     !isHome &&
+	  typeof views !== "number" &&
       commentConfig.type === "artalk" &&
       commentConfig.artalk?.visitorCount &&
       id && (

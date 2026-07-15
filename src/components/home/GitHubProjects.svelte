@@ -3,7 +3,6 @@ import { onMount } from "svelte";
 import type {
 	GitHubProjectSnapshot,
 	PortfolioData,
-	ProjectViewMode,
 } from "@/types/portfolioConfig";
 
 const { config }: { config: PortfolioData["github"] } = $props();
@@ -25,7 +24,6 @@ type GitHubRepo = {
 let projects = $state<GitHubProjectSnapshot[]>(config.fallbackProjects);
 let sourceLabel = $state("仓库快照");
 let refreshFailed = $state(false);
-let activeView = $state<ProjectViewMode>(config.defaultView);
 let activeCategory = $state("全部");
 
 const cacheKey = `firefly:github-projects:${config.username}`;
@@ -149,37 +147,27 @@ onMount(async () => {
 });
 </script>
 
-<div class="project-toolbar">
-	<div class="project-source">
-		<span class:project-source--cached={refreshFailed}></span>
-		{sourceLabel}
-	</div>
-	<div class:show-categories={activeView === "categories"} class="view-switch" aria-label="项目查看方式">
-		<span class="view-switch__indicator" aria-hidden="true"></span>
-		<button type="button" aria-pressed={activeView === "grid"} onclick={() => (activeView = "grid")}>项目列表</button>
-		<button type="button" aria-pressed={activeView === "categories"} onclick={() => (activeView = "categories")}>分类查看</button>
-	</div>
+<div class="project-source">
+	<span class:project-source--cached={refreshFailed}></span>
+	{sourceLabel}
 </div>
 
-{#if activeView === "categories"}
-	<div class="category-filter" aria-label="项目分类">
-		<button type="button" class:active={activeCategory === "全部"} onclick={() => (activeCategory = "全部")}>
-			全部 <span>{projects.length}</span>
+<div class="category-filter" aria-label="项目分类">
+	<button type="button" class:active={activeCategory === "全部"} onclick={() => (activeCategory = "全部")}>
+		全部 <span>{projects.length}</span>
+	</button>
+	{#each availableCategories as category}
+		<button type="button" class:active={activeCategory === category} onclick={() => (activeCategory = category)}>
+			{category} <span>{projects.filter((project) => projectCategory(project) === category).length}</span>
 		</button>
-		{#each availableCategories as category}
-			<button type="button" class:active={activeCategory === category} onclick={() => (activeCategory = category)}>
-				{category} <span>{projects.filter((project) => projectCategory(project) === category).length}</span>
-			</button>
-		{/each}
-	</div>
-{/if}
+	{/each}
+</div>
 
 <div
 	class="project-grid"
 	class:project-grid--three={config.gridColumns === 3}
-	class:project-grid--category={activeView === "categories"}
 >
-	{#each activeView === "categories" ? filteredProjects : projects as project, index (project.name)}
+	{#each filteredProjects as project, index (project.name)}
 		<article class:project-featured={config.featured.includes(project.name)}>
 			<header>
 				<span class="project-index">{String(index + 1).padStart(2, "0")}</span>
@@ -206,14 +194,6 @@ onMount(async () => {
 </div>
 
 <style>
-	.project-toolbar {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 1rem;
-		margin-bottom: 1rem;
-	}
-
 	.project-source {
 		display: inline-flex;
 		align-items: center;
@@ -221,6 +201,7 @@ onMount(async () => {
 		color: var(--content-meta);
 		font-size: 0.75rem;
 		font-weight: 700;
+		margin-bottom: 0.85rem;
 	}
 
 	.project-source span {
@@ -234,50 +215,6 @@ onMount(async () => {
 	.project-source span.project-source--cached {
 		background: var(--content-meta);
 		box-shadow: none;
-	}
-
-	.view-switch {
-		position: relative;
-		display: grid;
-		grid-template-columns: repeat(2, 1fr);
-		width: 12.5rem;
-		padding: 0.22rem;
-		border: 1px solid var(--line-divider);
-		border-radius: 999px;
-		background: var(--btn-regular-bg);
-	}
-
-	.view-switch__indicator {
-		position: absolute;
-		top: 0.22rem;
-		bottom: 0.22rem;
-		left: 0.22rem;
-		width: calc(50% - 0.22rem);
-		border-radius: 999px;
-		background: var(--card-bg);
-		box-shadow: 0 1px 5px color-mix(in oklch, var(--deep-text) 12%, transparent);
-		transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
-	}
-
-	.view-switch.show-categories .view-switch__indicator {
-		transform: translateX(100%);
-	}
-
-	.view-switch button {
-		position: relative;
-		z-index: 1;
-		min-height: 2rem;
-		padding: 0.3rem 0.7rem;
-		border: 0;
-		background: transparent;
-		color: var(--content-meta);
-		font-size: 0.72rem;
-		font-weight: 800;
-		cursor: pointer;
-	}
-
-	.view-switch button[aria-pressed="true"] {
-		color: var(--deep-text);
 	}
 
 	.category-filter {
@@ -316,9 +253,7 @@ onMount(async () => {
 	.project-grid {
 		display: grid;
 		grid-template-columns: repeat(2, minmax(0, 1fr));
-		gap: 1px;
-		border: 1px solid var(--line-divider);
-		background: var(--line-divider);
+		gap: 0.85rem;
 	}
 
 	.project-grid--three {
@@ -331,6 +266,8 @@ onMount(async () => {
 		min-height: 18rem;
 		flex-direction: column;
 		padding: 1.15rem;
+		border: 1px solid var(--line-divider);
+		border-radius: 0.75rem;
 		background: var(--card-bg);
 	}
 
@@ -443,15 +380,6 @@ onMount(async () => {
 	}
 
 	@media (max-width: 640px) {
-		.project-toolbar {
-			align-items: stretch;
-			flex-direction: column;
-		}
-
-		.view-switch {
-			width: 100%;
-		}
-
 		.project-grid,
 		.project-grid--three {
 			grid-template-columns: 1fr;
@@ -459,12 +387,6 @@ onMount(async () => {
 
 		article {
 			min-height: 0;
-		}
-	}
-
-	@media (prefers-reduced-motion: reduce) {
-		.view-switch__indicator {
-			transition: none;
 		}
 	}
 </style>

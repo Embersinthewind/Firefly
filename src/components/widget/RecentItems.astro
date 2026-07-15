@@ -1,0 +1,134 @@
+---
+import { Icon } from "astro-icon/components";
+import WidgetLayout from "@/components/common/WidgetLayout.astro";
+import type { WidgetComponentConfig } from "@/types/config";
+import { getSortedPosts } from "@/utils/content-utils";
+import { formatDateToYYYYMMDD } from "@/utils/date-utils";
+import { getPostUrlBySlug } from "@/utils/url-utils";
+
+interface Props {
+	class?: string;
+	style?: string;
+	widgetConfig?: WidgetComponentConfig;
+}
+
+const { class: className, style, widgetConfig } = Astro.props;
+const posts = (await getSortedPosts()).slice(0, 6);
+
+function getPublicImage(image: string) {
+	return /^(https?:)?\/\//i.test(image) || image.startsWith("/") ? image : "";
+}
+---
+
+<WidgetLayout
+	name="最近更新"
+	showTitle={widgetConfig?.showTitle !== false}
+	id="recent-items-widget"
+	class={className}
+	style={style}
+>
+	<div class="recent-items">
+		{
+			posts.map((post) => (
+				<a href={getPostUrlBySlug(post.id)} class="recent-item">
+					<div class="recent-item__cover" aria-hidden="true">
+						{getPublicImage(post.data.image) ? (
+							<img src={getPublicImage(post.data.image)} alt="" loading="lazy" />
+						) : (
+							<Icon is:inline name="material-symbols:article-outline-rounded" />
+						)}
+					</div>
+					<div class="recent-item__content">
+						<strong>{post.data.title}</strong>
+						<span>{formatDateToYYYYMMDD(post.data.updated ?? post.data.published)}</span>
+					</div>
+					<span class="recent-item__badge">{post.data.pinned ? "置顶" : "文章"}</span>
+				</a>
+			))
+		}
+	</div>
+</WidgetLayout>
+
+<style>
+	.recent-items {
+		display: flex;
+		flex-direction: column;
+		gap: 0.4rem;
+	}
+
+	.recent-item {
+		display: flex;
+		align-items: center;
+		gap: 0.65rem;
+		min-width: 0;
+		padding: 0.42rem;
+		border-radius: 0.65rem;
+		color: var(--deep-text);
+		transition:
+			background-color 180ms ease,
+			color 180ms ease;
+	}
+
+	.recent-item:hover,
+	.recent-item:focus-visible {
+		background: var(--btn-plain-bg-hover);
+		color: var(--primary);
+	}
+
+	.recent-item:focus-visible {
+		outline: 2px solid var(--primary);
+		outline-offset: 2px;
+	}
+
+	.recent-item__cover {
+		display: grid;
+		place-items: center;
+		width: 2.35rem;
+		height: 2.35rem;
+		flex: 0 0 auto;
+		overflow: hidden;
+		border-radius: 0.55rem;
+		background: var(--btn-regular-bg);
+		color: var(--primary);
+	}
+
+	.recent-item__cover img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+
+	.recent-item__cover :global(svg) {
+		width: 1.15rem;
+		height: 1.15rem;
+	}
+
+	.recent-item__content {
+		display: flex;
+		flex: 1;
+		flex-direction: column;
+		min-width: 0;
+	}
+
+	.recent-item__content strong {
+		overflow: hidden;
+		font-size: 0.78rem;
+		line-height: 1.35;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.recent-item__content span {
+		font-size: 0.67rem;
+		color: var(--meta-color);
+	}
+
+	.recent-item__badge {
+		flex: 0 0 auto;
+		padding: 0.16rem 0.4rem;
+		border-radius: 999px;
+		background: var(--btn-regular-bg);
+		color: var(--meta-color);
+		font-size: 0.62rem;
+	}
+</style>

@@ -25,7 +25,6 @@ const portfolioSchema = z.object({
 		limit: z.number().int().min(1).max(30),
 		featured: z.array(z.string()),
 		showForks: z.boolean(),
-		defaultView: z.enum(["grid", "categories"]),
 		gridColumns: z.union([z.literal(2), z.literal(3)]),
 		categories: z.array(z.string().min(1)),
 		projectMeta: z.array(

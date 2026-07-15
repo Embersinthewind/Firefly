@@ -61,6 +61,21 @@ export const sidebarLayoutConfig: SidebarLayoutConfig = {
 			enable: portfolioConfig.sidebar.showSkills,
 			position: "top",
 			showOnPostPage: true,
+			hideOnWritePage: true,
+		},
+		{
+			type: "articleViews",
+			enable: true,
+			position: "top",
+			showOnPostPage: false,
+			showOnWritePageOnly: true,
+		},
+		{
+			type: "recentItems",
+			enable: true,
+			position: "top",
+			showOnPostPage: false,
+			showOnWritePageOnly: true,
 		},
 		{
 			type: "stats",

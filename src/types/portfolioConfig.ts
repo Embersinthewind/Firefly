@@ -11,8 +11,6 @@ export type GitHubProjectSnapshot = {
 	topics?: string[];
 };
 
-export type ProjectViewMode = "grid" | "categories";
-
 export type ProjectMeta = {
 	name: string;
 	category: string;
@@ -59,7 +57,6 @@ export type PortfolioData = {
 		limit: number;
 		featured: string[];
 		showForks: boolean;
-		defaultView: ProjectViewMode;
 		gridColumns: 2 | 3;
 		categories: string[];
 		projectMeta: ProjectMeta[];

@@ -1,0 +1,84 @@
+---
+import { Icon } from "astro-icon/components";
+import WidgetLayout from "@/components/common/WidgetLayout.astro";
+import type { WidgetComponentConfig } from "@/types/config";
+
+interface Props {
+	class?: string;
+	style?: string;
+	widgetConfig?: WidgetComponentConfig;
+}
+
+const { class: className, style, widgetConfig } = Astro.props;
+---
+
+<WidgetLayout
+	name="浏览量"
+	showTitle={widgetConfig?.showTitle !== false}
+	id="article-views-widget"
+	class={className}
+	style={style}
+>
+	<div class="article-views" aria-live="polite">
+		<Icon is:inline name="material-symbols:visibility-outline-rounded" />
+		<div>
+			<strong data-article-views>0</strong>
+			<span>当前文章浏览量</span>
+		</div>
+	</div>
+</WidgetLayout>
+
+<script is:inline>
+	function updateArticleViews(value) {
+		const normalized = Math.max(0, Number(value) || 0);
+		document.querySelectorAll("[data-article-views]").forEach((element) => {
+			element.textContent = normalized.toLocaleString("zh-CN");
+		});
+	}
+
+	function initArticleViews() {
+		updateArticleViews(localStorage.getItem("firefly:article-writer:views"));
+	}
+
+	initArticleViews();
+	window.addEventListener("firefly:article-writer:views", (event) => {
+		updateArticleViews(event.detail);
+	});
+	document.addEventListener("swup:contentReplaced", initArticleViews);
+</script>
+
+<style>
+	.article-views {
+		display: flex;
+		align-items: center;
+		gap: 0.85rem;
+		padding: 0.6rem 0.25rem 0.25rem;
+	}
+
+	.article-views :global(svg) {
+		width: 2.25rem;
+		height: 2.25rem;
+		padding: 0.55rem;
+		border-radius: 0.65rem;
+		background: var(--btn-regular-bg);
+		color: var(--primary);
+	}
+
+	.article-views div {
+		display: flex;
+		flex-direction: column;
+		gap: 0.1rem;
+	}
+
+	.article-views strong {
+		font-size: 1.8rem;
+		line-height: 1;
+		color: var(--deep-text);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.article-views span {
+		font-size: 0.72rem;
+		color: var(--meta-color);
+	}
+</style>

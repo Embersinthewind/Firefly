@@ -2,10 +2,12 @@
 import type { MarkdownHeading } from "astro";
 import Advertisement from "@/components/widget/Advertisement.astro";
 import Announcement from "@/components/widget/Announcement.astro";
+import ArticleViews from "@/components/widget/ArticleViews.astro";
 import Calendar from "@/components/widget/Calendar.astro";
 import Categories from "@/components/widget/Categories.astro";
 import Music from "@/components/widget/Music.astro";
 import Profile from "@/components/widget/Profile.astro";
+import RecentItems from "@/components/widget/RecentItems.astro";
 import SidebarTOC from "@/components/widget/SidebarTOC.astro";
 import SiteInfo from "@/components/widget/SiteInfo.astro";
 import SiteStats from "@/components/widget/SiteStats.astro";
@@ -53,6 +55,8 @@ const componentMap = {
 	music: Music,
 	siteInfo: SiteInfo,
 	skills: Skills,
+	articleViews: ArticleViews,
+	recentItems: RecentItems,
 };
 
 // 获取侧边栏位置
@@ -104,6 +108,7 @@ const getAnimationDelay = (index: number): string => {
 
 // 判断当前页面是否为文章页面（服务端渲染时确定）
 const isPostPage = Astro.url.pathname.includes("/posts/");
+const isWritePage = Astro.url.pathname.startsWith("/write");
 
 // 判断组件在当前页面首屏是否可见（用于计算布局间距，避免隐藏组件占位）
 const isComponentInitiallyVisible = (
@@ -114,6 +119,12 @@ const isComponentInitiallyVisible = (
 		config.showOnPostPage === false &&
 		isPostPage
 	) {
+		return false;
+	}
+	if (config.showOnWritePageOnly === true && !isWritePage) {
+		return false;
+	}
+	if (config.hideOnWritePage === true && isWritePage) {
 		return false;
 	}
 	if (
@@ -148,6 +159,18 @@ const getComponentProps = (
 	if ("hideOnNonPostPage" in config && config.hideOnNonPostPage === true) {
 		baseProps.class = `${baseProps.class} widget-hide-on-non-post`;
 		if (!isPostPage) {
+			baseProps.class = `${baseProps.class} hidden`;
+		}
+	}
+	if (config.showOnWritePageOnly === true) {
+		baseProps.class = `${baseProps.class} widget-show-on-write-only`;
+		if (!isWritePage) {
+			baseProps.class = `${baseProps.class} hidden`;
+		}
+	}
+	if (config.hideOnWritePage === true) {
+		baseProps.class = `${baseProps.class} widget-hide-on-write`;
+		if (isWritePage) {
 			baseProps.class = `${baseProps.class} hidden`;
 		}
 	}
