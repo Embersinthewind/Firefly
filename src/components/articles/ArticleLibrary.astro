@@ -1,0 +1,260 @@
+---
+import type { CollectionEntry } from "astro:content";
+import { Icon } from "astro-icon/components";
+import { getPostUrlBySlug, url } from "@/utils/url-utils";
+
+interface Props {
+	posts: CollectionEntry<"posts">[];
+	total: number;
+}
+
+const { posts, total } = Astro.props;
+
+const formatDate = (date: Date): string =>
+	new Intl.DateTimeFormat("zh-CN", {
+		year: "numeric",
+		month: "2-digit",
+		day: "2-digit",
+	}).format(date);
+---
+
+<section class="article-library card-base" aria-labelledby="article-library-title">
+	<header class="article-library__header">
+		<div>
+			<p class="article-library__eyebrow">Articles</p>
+			<h1 id="article-library-title">文章列表</h1>
+			<p>共 {total} 篇文章，按发布时间从新到旧排列。</p>
+		</div>
+		<nav class="article-library__shortcuts" aria-label="文章视图">
+			<a href={url("/archive/")}>
+				<Icon is:inline name="material-symbols:archive-outline-rounded" />
+				归档
+			</a>
+			<a href={url("/categories/")}>
+				<Icon is:inline name="material-symbols:folder-open-outline" />
+				分类
+			</a>
+		</nav>
+	</header>
+
+	<div class="article-library__grid">
+		{
+			posts.map((post) => (
+				<article class="article-library__item">
+					<a class="article-library__title" href={getPostUrlBySlug(post.id)}>
+						{post.data.title}
+					</a>
+					<div class="article-library__meta">
+						<span>
+							<Icon is:inline name="material-symbols:calendar-today-outline-rounded" />
+							{formatDate(post.data.published)}
+						</span>
+						{post.data.category && (
+							<a href={url(`/categories/${encodeURIComponent(post.data.category)}/`)}>
+								<Icon is:inline name="material-symbols:folder-outline-rounded" />
+								{post.data.category}
+							</a>
+						)}
+					</div>
+					{post.data.description && <p class="article-library__description">{post.data.description}</p>}
+					{post.data.tags.length > 0 && (
+						<ul class="article-library__tags" aria-label="标签">
+							{post.data.tags.slice(0, 5).map((tag) => (
+								<li>
+									<a href={url(`/tags/${encodeURIComponent(tag)}/`)}>#{tag}</a>
+								</li>
+							))}
+						</ul>
+					)}
+				</article>
+			))
+		}
+	</div>
+</section>
+
+<style>
+	.article-library {
+		padding: 1.25rem;
+		margin-bottom: 1rem;
+	}
+
+	.article-library__header {
+		display: flex;
+		align-items: end;
+		justify-content: space-between;
+		gap: 1.5rem;
+		padding: 0.25rem 0.25rem 1.25rem;
+		border-bottom: 1px solid var(--line-divider);
+	}
+
+	.article-library__eyebrow {
+		margin: 0 0 0.15rem;
+		color: var(--primary);
+		font-size: 0.78rem;
+		font-weight: 750;
+	}
+
+	.article-library h1 {
+		margin: 0;
+		color: var(--deep-text);
+		font-size: 1.65rem;
+		line-height: 1.25;
+		letter-spacing: -0.025em;
+	}
+
+	.article-library__header p:last-child {
+		margin: 0.35rem 0 0;
+		color: var(--content-meta);
+		font-size: 0.875rem;
+	}
+
+	.article-library__shortcuts {
+		display: flex;
+		gap: 0.5rem;
+	}
+
+	.article-library__shortcuts a {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.35rem;
+		min-height: 2.35rem;
+		padding: 0.45rem 0.75rem;
+		border: 1px solid var(--line-color);
+		border-radius: 0.55rem;
+		color: var(--deep-text);
+		font-size: 0.8125rem;
+		font-weight: 650;
+		transition: border-color 180ms ease-out, color 180ms ease-out, background-color 180ms ease-out;
+	}
+
+	.article-library__shortcuts a:hover {
+		border-color: var(--primary);
+		background: var(--btn-plain-bg-hover);
+		color: var(--primary);
+	}
+
+	.article-library__grid {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 0;
+	}
+
+	.article-library__item {
+		display: flex;
+		min-width: 0;
+		min-height: 14rem;
+		flex-direction: column;
+		padding: 1.25rem;
+		border-bottom: 1px solid var(--line-divider);
+	}
+
+	.article-library__item:nth-child(odd) {
+		border-right: 1px solid var(--line-divider);
+	}
+
+	.article-library__title {
+		color: var(--deep-text);
+		font-size: 1.15rem;
+		font-weight: 760;
+		line-height: 1.45;
+		letter-spacing: -0.018em;
+		text-wrap: pretty;
+	}
+
+	.article-library__title:hover {
+		color: var(--primary);
+	}
+
+	.article-library__meta {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.75rem;
+		margin-top: 0.7rem;
+		color: var(--content-meta);
+		font-size: 0.75rem;
+	}
+
+	.article-library__meta span,
+	.article-library__meta a {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.3rem;
+	}
+
+	.article-library__meta a:hover {
+		color: var(--primary);
+	}
+
+	.article-library__description {
+		display: -webkit-box;
+		overflow: hidden;
+		margin: 0.75rem 0 1rem;
+		color: var(--content-meta);
+		font-size: 0.875rem;
+		line-height: 1.65;
+		-webkit-box-orient: vertical;
+		-webkit-line-clamp: 2;
+	}
+
+	.article-library__tags {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.4rem;
+		margin: auto 0 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.article-library__tags a {
+		display: inline-flex;
+		padding: 0.24rem 0.48rem;
+		border-radius: 0.35rem;
+		background: var(--btn-regular-bg);
+		color: var(--btn-content);
+		font-size: 0.72rem;
+		font-weight: 600;
+	}
+
+	.article-library__tags a:hover {
+		background: var(--btn-regular-bg-hover);
+	}
+
+	@media (min-width: 1440px) {
+		.article-library__grid {
+			grid-template-columns: repeat(3, minmax(0, 1fr));
+		}
+
+		.article-library__item:nth-child(odd) {
+			border-right: 0;
+		}
+
+		.article-library__item:not(:nth-child(3n)) {
+			border-right: 1px solid var(--line-divider);
+		}
+	}
+
+	@media (max-width: 720px) {
+		.article-library {
+			padding: 1rem;
+		}
+
+		.article-library__header {
+			align-items: flex-start;
+			flex-direction: column;
+		}
+
+		.article-library__grid {
+			grid-template-columns: 1fr;
+		}
+
+		.article-library__item {
+			min-height: 0;
+			padding-inline: 0.25rem;
+		}
+
+		.article-library__item:nth-child(odd),
+		.article-library__item:not(:nth-child(3n)) {
+			border-right: 0;
+		}
+	}
+</style>

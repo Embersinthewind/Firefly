@@ -9,7 +9,7 @@
     "build": "node scripts/generate-icons.js && npx tsx scripts/generate-lqips.ts && astro build && npx tsx scripts/subset-fonts.ts && pagefind --site dist",
     "preview": "astro preview",
     "astro": "astro",
-    "type-check": "tsc --noEmit --isolatedDeclarations",
+    "type-check": "tsc --noEmit",
     "new-post": "node scripts/new-post.js",
     "format": "biome format --write ./src",
     "lint": "biome check --write ./src",
@@ -47,12 +47,14 @@
     "astro-icon": "^1.1.5",
     "ci-info": "^4.4.0",
     "dayjs": "^1.11.21",
+    "dompurify": "^3.4.12",
     "expressive-code-collapsible": "^0.1.0",
     "expressive-code-language-badge": "^1.1.0",
     "glob": "^13.0.6",
     "hastscript": "^9.0.1",
     "katex": "^0.17.0",
     "l2d-widget": "^0.1.0",
+    "marked": "^18.0.6",
     "mdast-util-to-string": "^4.0.0",
     "pagefind": "^1.5.2",
     "pako": "^3.0.1",
@@ -76,7 +78,8 @@
     "tsx": "^4.23.0",
     "typescript": "^6.0.3",
     "unist-util-visit": "^5.1.0",
-    "wrangler": "^4.107.1"
+    "wrangler": "^4.107.1",
+    "yaml": "^2.9.0"
   },
   "devDependencies": {
     "@astrojs/ts-plugin": "^1.10.10",

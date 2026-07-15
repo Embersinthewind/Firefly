@@ -5,140 +5,91 @@ import {
 	NavBarSearchMethod,
 } from "../types/navBarConfig";
 
-// ============================================================================
-// 导航栏配置 - 根据顺序动态生成导航栏链接
-// NavBar Configuration - Dynamically generate navigation bar links based on order
-// ============================================================================
 const getDynamicNavBarConfig = (): NavBarConfig => {
-	// 基础导航栏链接
-	const links: NavBarLink[] = [
-		// 主页
-		LinkPresets.Home,
-	];
+	const links: NavBarLink[] = [LinkPresets.Home];
 
-	// 文章及其子菜单
 	links.push({
 		name: "文章",
-		url: "#",
+		url: "/articles/",
 		icon: "material-symbols:article",
 		children: [
-			// 归档
-			LinkPresets.Archive,
-
-			// 分类
+			LinkPresets.Articles,
 			LinkPresets.Categories,
-
-			// 标签
-			LinkPresets.Tags,
+			LinkPresets.Archive,
+			LinkPresets.Write,
 		],
 	});
 
-	// 友链
-	links.push(LinkPresets.Friends);
+	links.push(LinkPresets.Navigation);
 
-	// 留言板
-	links.push(LinkPresets.Guestbook);
-
-	// 我的及其子菜单
 	links.push({
-		name: "我的",
+		name: "动态",
 		url: "#",
-		icon: "material-symbols:person",
-		children: [
-			// 相册
-			LinkPresets.Gallery,
-
-			// 追番
-			LinkPresets.Anime,
-
-			// 番组计划
-			LinkPresets.Bangumi,
-		],
+		icon: "material-symbols:dynamic-feed-rounded",
+		children: [LinkPresets.Gallery, LinkPresets.Guestbook],
 	});
 
-	// 关于及其子菜单
+	links.push({
+		name: "记录",
+		url: "#",
+		icon: "material-symbols:history-edu-rounded",
+		children: [LinkPresets.Bangumi, LinkPresets.Anime],
+	});
+
 	links.push({
 		name: "关于",
 		url: "#",
-		icon: "material-symbols:info",
+		icon: "material-symbols:info-outline-rounded",
 		children: [
-			// 打赏
-			LinkPresets.Sponsor,
-
-			// 关于页面
 			LinkPresets.About,
-		],
-	});
-
-	// 自定义导航栏链接
-	links.push({
-		name: "链接",
-		url: "#",
-		icon: "material-symbols:link",
-		// 子菜单
-		children: [
+			LinkPresets.Friends,
+			LinkPresets.Sponsor,
 			{
-				name: "GitHub",
-				url: "https://github.com/CuteLeaf/Firefly",
+				name: "项目主页",
+				url: "https://github.com/Embersinthewind/Firefly",
 				external: true,
 				icon: "fa7-brands:github",
 			},
-			{
-				name: "Gitee",
-				url: "https://gitee.com/CuteLeaf/Firefly",
-				external: true,
-				icon: "fa7-brands:gitee",
-			},
-			{
-				name: "QQ交流群",
-				url: "https://qm.qq.com/q/ZGsFa8qX2G",
-				external: true,
-				icon: "fa7-brands:qq",
-			},
-			{
-				name: "Firefly文档",
-				url: "https://docs-firefly.cuteleaf.cn",
-				external: true,
-				icon: "material-symbols:docs",
-			},
 		],
 	});
-
-	// 文档链接
-	// links.push({
-	// 	name: "文档",
-	// 	url: "https://docs-firefly.cuteleaf.cn",
-	// 	external: true,
-	// 	icon: "material-symbols:docs",
-	// });
 
 	return { links } as NavBarConfig;
 };
 
-// 导航搜索配置
 export const navBarSearchConfig: NavBarSearchConfig = {
 	method: NavBarSearchMethod.PageFind,
 };
 
-// ============================================================================
-// 链接预设 - 可自由自定义导航栏链接的名称、图标和URL
-// Link Presets - Allows free customization of the name, icon, and URL of navigation bar links
-// ============================================================================
 export const LinkPresets: Record<string, NavBarLink> = {
 	Home: {
 		name: "主页",
 		url: "/",
 		icon: "material-symbols:home",
 	},
-	Archive: {
-		name: "归档",
-		url: "/archive/",
-		icon: "material-symbols:archive",
+	Articles: {
+		name: "文章列表",
+		url: "/articles/",
+		icon: "material-symbols:article-outline",
+	},
+	Navigation: {
+		name: "网站导航",
+		url: "/navigation/",
+		icon: "material-symbols:explore-outline-rounded",
 	},
 	Categories: {
 		name: "分类",
 		url: "/categories/",
 		icon: "material-symbols:folder-open-rounded",
+	},
+	Archive: {
+		name: "归档",
+		url: "/archive/",
+		icon: "material-symbols:archive",
+	},
+	Write: {
+		name: "写文章",
+		url: "/write/",
+		icon: "material-symbols:edit-note-rounded",
 	},
 	Tags: {
 		name: "标签",
@@ -169,7 +120,7 @@ export const LinkPresets: Record<string, NavBarLink> = {
 		icon: "material-symbols:person",
 	},
 	Bangumi: {
-		name: "番组计划",
+		name: "影视与游戏",
 		url: "/bangumi/",
 		icon: "material-symbols:movie",
 		pageKey: "bangumi",
@@ -181,7 +132,7 @@ export const LinkPresets: Record<string, NavBarLink> = {
 		pageKey: "gallery",
 	},
 	Anime: {
-		name: "追番",
+		name: "番组记录",
 		url: "/anime/",
 		icon: "material-symbols:live-tv",
 		pageKey: "anime",

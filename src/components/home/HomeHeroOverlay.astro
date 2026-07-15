@@ -1,0 +1,274 @@
+---
+import { Icon } from "astro-icon/components";
+import { profileConfig, siteConfig } from "@/config";
+import { url } from "@/utils/url-utils";
+
+const displayTitle = `${profileConfig.name || siteConfig.title}の博客`;
+const intro =
+	profileConfig.bio && profileConfig.bio !== "Hello, I'm Yiyu."
+		? profileConfig.bio
+		: "躬身入局，心为主理，行有尺度，自持本心.";
+const primaryLink = profileConfig.links.find((link) =>
+	link.name.toLowerCase().includes("github"),
+);
+---
+
+<section class="home-hero-stage" aria-label="首页介绍">
+	<div class="home-hero-stage__copy">
+		<p class="home-hero-stage__role">[ 个人博客 / 内容主理 ]</p>
+		<h1>{displayTitle}</h1>
+		{
+			primaryLink && (
+				<a href={primaryLink.url} class="home-hero-stage__button" target="_blank" rel="noreferrer">
+					<Icon is:inline name={primaryLink.icon} />
+					<span>{primaryLink.name}</span>
+				</a>
+			)
+		}
+		<p class="home-hero-stage__motto">{intro}</p>
+	</div>
+
+	<div class="home-hero-stage__side" aria-hidden="true">
+		<strong>博客</strong>
+		<span>{siteConfig.title}</span>
+		<i></i>
+		<span>CREATIVE</span>
+	</div>
+
+	<div class="home-hero-stage__dock">
+		<div>
+			<strong>{profileConfig.name || siteConfig.title}？</strong>
+			<span>WELCOME TO MY BLOG, ENJOY YOUR STAY!</span>
+		</div>
+	</div>
+
+	<a class="home-hero-stage__avatar" href={url("/about/")} aria-label="查看关于页">
+		<img src={url(profileConfig.avatar || "/favicon/favicon.ico")} alt={profileConfig.name || siteConfig.title} />
+		<span>关于</span>
+	</a>
+</section>
+
+<style>
+	.home-hero-stage {
+		position: absolute;
+		inset: 0;
+		overflow: hidden;
+		color: white;
+		pointer-events: none;
+	}
+
+	.home-hero-stage::before {
+		position: absolute;
+		inset: 0;
+		background:
+			radial-gradient(circle at 58% 38%, rgba(255, 255, 255, 0.22), transparent 34rem),
+			linear-gradient(90deg, rgba(0, 0, 0, 0.72), rgba(0, 0, 0, 0.22) 52%, rgba(0, 0, 0, 0.18));
+		content: "";
+	}
+
+	.home-hero-stage::after {
+		position: absolute;
+		inset: 0;
+		background-image:
+			linear-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+			linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+		background-size: 7.5rem 7.5rem;
+		mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.55), transparent 78%);
+		content: "";
+	}
+
+	.home-hero-stage__copy {
+		position: absolute;
+		top: 34%;
+		left: max(7vw, 4rem);
+		z-index: 2;
+		display: flex;
+		max-width: min(58rem, 72vw);
+		flex-direction: column;
+		align-items: flex-start;
+	}
+
+	.home-hero-stage__role {
+		margin: 0 0 0.3rem;
+		color: rgba(255, 255, 255, 0.86);
+		font-size: clamp(1rem, 1.6vw, 1.35rem);
+		font-weight: 900;
+		text-shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
+	}
+
+	.home-hero-stage h1 {
+		margin: 0;
+		color: white;
+		font-size: clamp(4.5rem, 11vw, 9.4rem);
+		font-weight: 950;
+		line-height: 0.9;
+		letter-spacing: -0.035em;
+		text-shadow:
+			0 0 1px rgba(255, 255, 255, 0.7),
+			0 16px 46px rgba(0, 0, 0, 0.55);
+		text-wrap: balance;
+	}
+
+	.home-hero-stage__button {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.5rem;
+		min-height: 2.2rem;
+		margin-top: 1.4rem;
+		padding: 0.35rem 1rem;
+		border: 1px solid rgba(255, 255, 255, 0.42);
+		border-radius: 0.35rem;
+		background: rgba(255, 255, 255, 0.82);
+		color: rgba(0, 0, 0, 0.86);
+		font-weight: 900;
+		pointer-events: auto;
+	}
+
+	.home-hero-stage__motto {
+		max-width: 45rem;
+		margin: 2rem 0 0;
+		color: rgba(255, 255, 255, 0.82);
+		font-size: clamp(1rem, 1.5vw, 1.35rem);
+		font-weight: 800;
+		line-height: 1.7;
+		text-shadow: 0 2px 16px rgba(0, 0, 0, 0.58);
+	}
+
+	.home-hero-stage__side {
+		position: absolute;
+		top: 34%;
+		right: max(4vw, 2rem);
+		z-index: 2;
+		display: grid;
+		place-items: center;
+		gap: 0.8rem;
+		writing-mode: vertical-rl;
+		text-orientation: mixed;
+	}
+
+	.home-hero-stage__side strong {
+		font-size: clamp(2rem, 3.2vw, 3.2rem);
+		font-weight: 950;
+		text-shadow: 0 5px 16px rgba(0, 0, 0, 0.6);
+	}
+
+	.home-hero-stage__side span {
+		color: rgba(255, 255, 255, 0.7);
+		font-size: 0.72rem;
+		font-weight: 900;
+		letter-spacing: 0.45em;
+	}
+
+	.home-hero-stage__side i {
+		width: 1px;
+		height: 5rem;
+		background: linear-gradient(to bottom, transparent, rgba(255, 255, 255, 0.7), transparent);
+	}
+
+	.home-hero-stage__dock {
+		position: absolute;
+		right: 22rem;
+		bottom: 5.4rem;
+		z-index: 2;
+		width: min(30rem, 44vw);
+		padding: 0.75rem 1.2rem;
+		border: 1px solid rgba(255, 255, 255, 0.28);
+		border-radius: 0.55rem;
+		background: rgba(0, 0, 0, 0.26);
+		box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.28);
+		text-align: center;
+		backdrop-filter: blur(8px);
+	}
+
+	.home-hero-stage__dock strong,
+	.home-hero-stage__dock span {
+		display: block;
+	}
+
+	.home-hero-stage__dock strong {
+		font-size: 1.05rem;
+		font-weight: 950;
+	}
+
+	.home-hero-stage__dock span {
+		margin-top: 0.2rem;
+		color: rgba(255, 255, 255, 0.74);
+		font-size: 0.72rem;
+		font-weight: 900;
+	}
+
+	.home-hero-stage__avatar {
+		position: absolute;
+		right: 5rem;
+		bottom: 3.2rem;
+		z-index: 3;
+		display: grid;
+		place-items: center;
+		width: 7rem;
+		height: 7rem;
+		border: 5px solid white;
+		border-radius: 50%;
+		background: white;
+		color: black;
+		pointer-events: auto;
+	}
+
+	.home-hero-stage__avatar img {
+		width: 100%;
+		height: 100%;
+		border-radius: inherit;
+		object-fit: cover;
+	}
+
+	.home-hero-stage__avatar span {
+		position: absolute;
+		right: -0.6rem;
+		bottom: -0.6rem;
+		padding: 0.22rem 0.75rem;
+		border-radius: 999px;
+		background: white;
+		color: black;
+		font-size: 0.76rem;
+		font-weight: 950;
+	}
+
+	@media (max-width: 1023px) {
+		.home-hero-stage__copy {
+			top: 28%;
+			left: 1.5rem;
+			max-width: calc(100vw - 3rem);
+		}
+
+		.home-hero-stage h1 {
+			font-size: clamp(3.2rem, 16vw, 6rem);
+		}
+
+		.home-hero-stage__side {
+			display: none;
+		}
+
+		.home-hero-stage__dock {
+			right: 1.2rem;
+			bottom: 4.2rem;
+			left: 1.2rem;
+			width: auto;
+		}
+
+		.home-hero-stage__avatar {
+			right: 1.2rem;
+			bottom: 8.8rem;
+			width: 4.8rem;
+			height: 4.8rem;
+			border-width: 3px;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.home-hero-stage *,
+		.home-hero-stage::before,
+		.home-hero-stage::after {
+			transition: none !important;
+			animation: none !important;
+		}
+	}
+</style>
