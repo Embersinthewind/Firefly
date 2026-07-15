@@ -1,0 +1,22 @@
+---
+import SiteConfigurator from "@/components/config/SiteConfigurator.svelte";
+import { siteEditorGitHubConfig } from "@/config";
+import MainGridLayout from "@/layouts/MainGridLayout.astro";
+import type {
+	PortfolioData,
+	SiteEditorSiteData,
+} from "@/types/portfolioConfig";
+import portfolioData from "../data/portfolio.json";
+import profileData from "../data/profile.json";
+import siteData from "../data/site.json";
+---
+
+<MainGridLayout title="站点配置" description="通过 GitHub 权限保护的可视化站点配置页面">
+	<SiteConfigurator
+		initialSite={siteData as SiteEditorSiteData}
+		initialProfile={profileData}
+		initialPortfolio={portfolioData as PortfolioData}
+		repository={siteEditorGitHubConfig}
+		client:load
+	/>
+</MainGridLayout>

@@ -44,6 +44,7 @@ const getDynamicNavBarConfig = (): NavBarConfig => {
 			LinkPresets.About,
 			LinkPresets.Friends,
 			LinkPresets.Sponsor,
+			LinkPresets.Config,
 			{
 				name: "项目主页",
 				url: "https://github.com/Embersinthewind/Firefly",
@@ -136,6 +137,11 @@ export const LinkPresets: Record<string, NavBarLink> = {
 		url: "/anime/",
 		icon: "material-symbols:live-tv",
 		pageKey: "anime",
+	},
+	Config: {
+		name: "站点配置",
+		url: "/config/",
+		icon: "material-symbols:settings-rounded",
 	},
 };
 

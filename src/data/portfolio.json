@@ -1,0 +1,106 @@
+{
+	"home": {
+		"heading": "项目与实践",
+		"intro": "这里展示我持续维护与参与的公开项目。仓库数据直接来自 GitHub，无需再创建单独的展示仓库。"
+	},
+	"github": {
+		"username": "Embersinthewind",
+		"limit": 8,
+		"featured": ["K-Vault", "Firefly", "TaskPlan"],
+		"showForks": true,
+		"fallbackProjects": [
+			{
+				"name": "K-Vault",
+				"description": "基于 Cloudflare 的 Serverless 聚合云盘，支持 Telegram、R2、S3、Discord 与 HuggingFace 等多种存储后端。",
+				"url": "https://github.com/Embersinthewind/K-Vault",
+				"language": "TypeScript",
+				"stars": 0,
+				"forks": 0,
+				"updatedAt": "2026-07-14T14:42:02Z",
+				"isFork": true
+			},
+			{
+				"name": "Firefly",
+				"description": "清新美观的 Astro 静态博客主题模板，基于 Fuwari 进行二次开发。",
+				"url": "https://github.com/Embersinthewind/Firefly",
+				"language": "Astro",
+				"stars": 0,
+				"forks": 0,
+				"updatedAt": "2026-07-14T07:51:12Z",
+				"isFork": true
+			},
+			{
+				"name": "TaskPlan",
+				"description": "用于任务规划与执行跟踪的个人项目。",
+				"url": "https://github.com/Embersinthewind/TaskPlan",
+				"language": "TypeScript",
+				"stars": 0,
+				"forks": 0,
+				"updatedAt": "2026-06-03T14:17:45Z",
+				"isFork": false
+			},
+			{
+				"name": "user-center-front",
+				"description": "用户中心前端，实现账户注册、登录与个人资料管理。",
+				"url": "https://github.com/Embersinthewind/user-center-front",
+				"language": "TypeScript",
+				"stars": 0,
+				"forks": 0,
+				"updatedAt": "2023-10-04T01:46:30Z",
+				"isFork": false
+			},
+			{
+				"name": "user-center-backend",
+				"description": "用户中心后端服务。",
+				"url": "https://github.com/Embersinthewind/user-center-backend",
+				"language": "Java",
+				"stars": 0,
+				"forks": 0,
+				"updatedAt": "2023-10-03T09:02:46Z",
+				"isFork": false
+			},
+			{
+				"name": "Ulife",
+				"description": "便利帮，生活所需一手包办。",
+				"url": "https://github.com/Embersinthewind/Ulife",
+				"language": "Java",
+				"stars": 0,
+				"forks": 0,
+				"updatedAt": "2023-10-14T03:08:21Z",
+				"isFork": false
+			}
+		]
+	},
+	"skills": [
+		{ "name": "Astro", "icon": "simple-icons:astro" },
+		{ "name": "Svelte", "icon": "simple-icons:svelte" },
+		{ "name": "TypeScript", "icon": "simple-icons:typescript" },
+		{ "name": "Java", "icon": "simple-icons:openjdk" },
+		{ "name": "Spring", "icon": "simple-icons:spring" },
+		{ "name": "Cloudflare", "icon": "simple-icons:cloudflare" },
+		{ "name": "Docker", "icon": "simple-icons:docker" },
+		{ "name": "GitHub", "icon": "simple-icons:github" }
+	],
+	"sidebar": {
+		"showSkills": true,
+		"showCalendar": true,
+		"showAnnouncement": true
+	},
+	"appearance": {
+		"bannerTitle": "Lovely firefly!",
+		"bannerSubtitle": [
+			"In Reddened Chrysalis, I Once Rest",
+			"From Shattered Sky, I Free Fall",
+			"Amidst Silenced Stars, I Deep Sleep"
+		],
+		"desktopWallpaper": "",
+		"mobileWallpaper": ""
+	},
+	"announcement": {
+		"title": "公告",
+		"content": "欢迎来到我的博客！这里主要展示我的个人项目与技术实践。",
+		"closable": true,
+		"linkText": "了解更多",
+		"linkUrl": "/about/"
+	}
+}

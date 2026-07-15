@@ -59,6 +59,10 @@ export {
 } from "./navigationConfig"; // 网站导航及 GitHub 写入目标
 export { live2dWidgetConfig, spineModelConfig } from "./pioConfig"; // 看板娘配置
 export { plantumlConfig } from "./plantumlConfig"; // PlantUML 图表配置
+export {
+	portfolioConfig,
+	siteEditorGitHubConfig,
+} from "./portfolioConfig"; // 首页项目与站点配置写入目标
 export { profileConfig } from "./profileConfig"; // 用户资料配置
 // 布局配置
 export { sidebarLayoutConfig } from "./sidebarConfig"; // 侧边栏布局配置

@@ -30,6 +30,7 @@ export type {
 } from "./navigationConfig";
 export type { Live2DWidgetConfig, SpineModelConfig } from "./pioConfig";
 export type { PlantUMLConfig } from "./plantumlConfig";
+export type * from "./portfolioConfig";
 export type { ProfileConfig } from "./profileConfig";
 export type {
 	AdConfig,
