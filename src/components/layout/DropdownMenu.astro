@@ -34,9 +34,21 @@ const matchesCurrentPath = (value: string) => {
 const isActive = hasChildren
 	? processedLink.children?.some((child) => matchesCurrentPath(child.url))
 	: matchesCurrentPath(processedLink.url);
+const activityTargets =
+	(hasChildren
+		? processedLink.children
+				?.filter((child) => !child.external)
+				.map((child) => child.url)
+		: processedLink.external
+			? []
+			: [processedLink.url]) ?? [];
 ---
 
-<div class:list={["dropdown-container", "navbar-nav-item", isActive && "is-active", className]} data-dropdown>
+<div
+	class:list={["dropdown-container", "navbar-nav-item", isActive && "is-active", className]}
+	data-dropdown
+	data-nav-targets={JSON.stringify(activityTargets)}
+>
 	{hasChildren ? (
 		<button 
 			class="btn-plain scale-animation rounded-lg h-10 font-bold px-4 pr-8 active:scale-95 dropdown-trigger relative"
@@ -200,4 +212,55 @@ const isActive = hasChildren
 		menu.classList.add('opacity-0', 'invisible', 'pointer-events-none', 'translate-y-[-8px]');
 		menu.classList.remove('opacity-100', 'visible', 'pointer-events-auto', 'translate-y-0');
 	}
+</script>
+
+<script>
+	function normalizeNavPath(value: string) {
+		if (!value || value === "#" || /^https?:\/\//.test(value)) return "";
+		const pathname = value.split(/[?#]/)[0] || "/";
+		return pathname === "/" ? "/" : `/${pathname.replace(/^\/+|\/+$/g, "")}/`;
+	}
+
+	function navPathMatches(current: string, target: string) {
+		const normalizedTarget = normalizeNavPath(target);
+		if (!normalizedTarget) return false;
+		return normalizedTarget === "/"
+			? current === "/"
+			: current.startsWith(normalizedTarget);
+	}
+
+	function updateNavbarActivity(urlValue = window.location.href) {
+		const current = normalizeNavPath(new URL(urlValue, window.location.href).pathname);
+		document.querySelectorAll<HTMLElement>("[data-nav-targets]").forEach((item) => {
+			let targets: string[] = [];
+			try {
+				targets = JSON.parse(item.dataset.navTargets || "[]") as string[];
+			} catch {
+				targets = [];
+			}
+			const active = targets.some((target) => navPathMatches(current, target));
+			item.classList.toggle("is-active", active);
+			const control = item.querySelector<HTMLElement>("a, button");
+			if (control) {
+				if (active) control.setAttribute("aria-current", "page");
+				else control.removeAttribute("aria-current");
+			}
+		});
+	}
+
+	function connectNavbarToSwup() {
+		if (!window.swup?.hooks || window.__fireflyNavbarActivityBound) return;
+		window.__fireflyNavbarActivityBound = true;
+		window.swup.hooks.on("visit:start", (visit: { to: { url: string } }) => {
+			updateNavbarActivity(visit.to.url);
+		});
+		window.swup.hooks.on("content:replace", () => updateNavbarActivity());
+	}
+
+	updateNavbarActivity();
+	connectNavbarToSwup();
+	document.addEventListener("astro:page-load", () => updateNavbarActivity());
+	document.addEventListener("swup:contentReplaced", () => updateNavbarActivity());
+	document.addEventListener("swup:enable", connectNavbarToSwup);
+	window.addEventListener("popstate", () => updateNavbarActivity());
 </script>

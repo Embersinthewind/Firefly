@@ -317,6 +317,20 @@ function removeSkill(index: number) {
 	portfolio.skills.splice(index, 1);
 }
 
+function addProjectMeta() {
+	if (!authorized) return;
+	portfolio.github.projectMeta.push({
+		name: "新仓库",
+		category: portfolio.github.categories[0] || "个人项目",
+		tags: [],
+	});
+}
+
+function removeProjectMeta(index: number) {
+	if (!authorized) return;
+	portfolio.github.projectMeta.splice(index, 1);
+}
+
 onMount(() => {
 	const stored = sessionStorage.getItem(tokenStorageKey);
 	if (stored) {
@@ -409,6 +423,22 @@ onMount(() => {
 					<label class="check"><input type="checkbox" bind:checked={site.theme.fixed} />固定主题色，隐藏访客调色选项</label>
 					<label class="check"><input type="checkbox" bind:checked={site.layout.categoryBar} />显示分类快捷导航</label>
 				</div>
+				<div class="config-section">
+					<header><h2>其他设置</h2><p>控制首页右下角状态事件，可按指定时区和工作时间自动切换。</p></header>
+					<div class="form-grid three">
+						<label>状态显示方式<select bind:value={portfolio.statusEvent.mode}><option value="schedule">按时间自动切换</option><option value="working">始终显示工作</option><option value="resting">始终显示休息</option><option value="hidden">隐藏状态圆圈</option></select></label>
+						<label>时区<input bind:value={portfolio.statusEvent.timezone} placeholder="Asia/Shanghai" /></label>
+						<label>点击跳转<input bind:value={portfolio.statusEvent.linkUrl} placeholder="/about/" /></label>
+					</div>
+					<div class="form-grid two">
+						<label>上班时间（0–23）<input type="number" min="0" max="23" bind:value={portfolio.statusEvent.workStart} /></label>
+						<label>下班时间（1–24）<input type="number" min="1" max="24" bind:value={portfolio.statusEvent.workEnd} /></label>
+					</div>
+					<div class="form-grid two">
+						<label>工作状态文字<input bind:value={portfolio.statusEvent.workingLabel} /></label>
+						<label>休息状态文字<input bind:value={portfolio.statusEvent.restingLabel} /></label>
+					</div>
+				</div>
 			{:else if activeTab === "projects"}
 				<div class="config-section">
 					<header><h2>GitHub 项目主页</h2><p>公开仓库由 GitHub API 自动同步，不需要另建展示仓库。</p></header>
@@ -418,6 +448,28 @@ onMount(() => {
 					</div>
 					<label>置顶仓库（逗号分隔）<input value={portfolio.github.featured.join(", ")} oninput={(event) => (portfolio.github.featured = event.currentTarget.value.split(",").map((item) => item.trim()).filter(Boolean))} /></label>
 					<label class="check"><input type="checkbox" bind:checked={portfolio.github.showForks} />展示参与或 Fork 的项目</label>
+				</div>
+				<div class="config-section">
+					<header><h2>项目查看方式</h2><p>访客可以在项目网格与分类视图之间切换。</p></header>
+					<div class="form-grid two">
+						<label>默认视图<select bind:value={portfolio.github.defaultView}><option value="grid">项目列表</option><option value="categories">分类查看</option></select></label>
+						<label>每行项目数<select bind:value={portfolio.github.gridColumns}><option value={2}>2 个</option><option value={3}>3 个</option></select></label>
+					</div>
+					<label>项目分类（逗号分隔）<input value={portfolio.github.categories.join(", ")} oninput={(event) => (portfolio.github.categories = event.currentTarget.value.split(",").map((item) => item.trim()).filter(Boolean))} /></label>
+				</div>
+				<div class="config-section">
+					<header><div><h2>仓库分类与标签</h2><p>仓库名称需与 GitHub 一致；分类和标签均可自定义。</p></div><button type="button" class="button-secondary" onclick={addProjectMeta}>添加仓库规则</button></header>
+					<div class="repeater">
+						{#each portfolio.github.projectMeta as item, index}
+							<div class="repeater-row project-rule">
+								<input aria-label="GitHub 仓库名称" bind:value={item.name} placeholder="仓库名称" />
+								<input aria-label="项目分类" bind:value={item.category} list="project-category-options" placeholder="项目分类" />
+								<input aria-label="项目标签" value={item.tags.join(", ")} oninput={(event) => (item.tags = event.currentTarget.value.split(",").map((tag) => tag.trim()).filter(Boolean))} placeholder="标签，逗号分隔" />
+								<button type="button" class="danger" onclick={() => removeProjectMeta(index)}>删除</button>
+							</div>
+						{/each}
+					</div>
+					<datalist id="project-category-options">{#each portfolio.github.categories as category}<option value={category}></option>{/each}</datalist>
 				</div>
 				<div class="config-section">
 					<header><h2>首页文案</h2><p>用于项目列表上方的标题与简介。</p></header>
@@ -526,7 +578,8 @@ onMount(() => {
 	.repeater-row { display: grid; gap: .6rem; align-items: center; }
 	.profile-link { grid-template-columns: .7fr 1.4fr 1fr auto; }
 	.skill-row { grid-template-columns: 1fr 1.5fr auto; }
+	.project-rule { grid-template-columns: .9fr .8fr 1.25fr auto; }
 	.danger { border: 1px solid color-mix(in oklch, #dc2626 38%, transparent); background: transparent; color: #dc2626; }
 	@media (max-width: 900px) { .config-hero { align-items: flex-start; flex-direction: column; } .config-actions { justify-content: flex-start; } .auth-panel, .form-grid.three { grid-template-columns: 1fr; } }
-	@media (max-width: 640px) { .form-grid.two, .toggle-grid, .profile-link, .skill-row { grid-template-columns: 1fr; } .config-section > header { flex-direction: column; } }
+	@media (max-width: 640px) { .form-grid.two, .toggle-grid, .profile-link, .skill-row, .project-rule { grid-template-columns: 1fr; } .config-section > header { flex-direction: column; } }
 </style>

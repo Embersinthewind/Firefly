@@ -8,7 +8,18 @@ export type GitHubProjectSnapshot = {
 	forks?: number;
 	updatedAt?: string;
 	isFork?: boolean;
+	topics?: string[];
 };
+
+export type ProjectViewMode = "grid" | "categories";
+
+export type ProjectMeta = {
+	name: string;
+	category: string;
+	tags: string[];
+};
+
+export type HeroStatusMode = "schedule" | "working" | "resting" | "hidden";
 
 export type SkillItem = {
 	name: string;
@@ -48,6 +59,10 @@ export type PortfolioData = {
 		limit: number;
 		featured: string[];
 		showForks: boolean;
+		defaultView: ProjectViewMode;
+		gridColumns: 2 | 3;
+		categories: string[];
+		projectMeta: ProjectMeta[];
 		fallbackProjects: GitHubProjectSnapshot[];
 	};
 	skills: SkillItem[];
@@ -61,6 +76,15 @@ export type PortfolioData = {
 		bannerSubtitle: string[];
 		desktopWallpaper: string;
 		mobileWallpaper: string;
+	};
+	statusEvent: {
+		mode: HeroStatusMode;
+		timezone: string;
+		workStart: number;
+		workEnd: number;
+		workingLabel: string;
+		restingLabel: string;
+		linkUrl: string;
 	};
 	announcement: {
 		title: string;

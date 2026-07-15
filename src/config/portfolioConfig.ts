@@ -15,6 +15,7 @@ const projectSchema = z.object({
 	forks: z.number().optional(),
 	updatedAt: z.string().optional(),
 	isFork: z.boolean().optional(),
+	topics: z.array(z.string()).optional(),
 });
 
 const portfolioSchema = z.object({
@@ -24,6 +25,16 @@ const portfolioSchema = z.object({
 		limit: z.number().int().min(1).max(30),
 		featured: z.array(z.string()),
 		showForks: z.boolean(),
+		defaultView: z.enum(["grid", "categories"]),
+		gridColumns: z.union([z.literal(2), z.literal(3)]),
+		categories: z.array(z.string().min(1)),
+		projectMeta: z.array(
+			z.object({
+				name: z.string().min(1),
+				category: z.string().min(1),
+				tags: z.array(z.string()),
+			}),
+		),
 		fallbackProjects: z.array(projectSchema),
 	}),
 	skills: z.array(
@@ -39,6 +50,15 @@ const portfolioSchema = z.object({
 		bannerSubtitle: z.array(z.string()),
 		desktopWallpaper: z.string(),
 		mobileWallpaper: z.string(),
+	}),
+	statusEvent: z.object({
+		mode: z.enum(["schedule", "working", "resting", "hidden"]),
+		timezone: z.string().min(1),
+		workStart: z.number().int().min(0).max(23),
+		workEnd: z.number().int().min(0).max(24),
+		workingLabel: z.string().min(1),
+		restingLabel: z.string().min(1),
+		linkUrl: z.string().min(1),
 	}),
 	announcement: z.object({
 		title: z.string(),

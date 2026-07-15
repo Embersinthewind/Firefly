@@ -17,7 +17,8 @@
 				"stars": 0,
 				"forks": 0,
 				"updatedAt": "2026-07-14T14:42:02Z",
-				"isFork": true
+				"isFork": true,
+				"topics": ["Cloudflare", "Serverless", "图床"]
 			},
 			{
 				"name": "Firefly",
@@ -27,7 +28,8 @@
 				"stars": 0,
 				"forks": 0,
 				"updatedAt": "2026-07-14T07:51:12Z",
-				"isFork": true
+				"isFork": true,
+				"topics": ["Astro", "Svelte", "博客主题"]
 			},
 			{
 				"name": "TaskPlan",
@@ -37,7 +39,8 @@
 				"stars": 0,
 				"forks": 0,
 				"updatedAt": "2026-06-03T14:17:45Z",
-				"isFork": false
+				"isFork": false,
+				"topics": ["TypeScript", "任务规划"]
 			},
 			{
 				"name": "user-center-front",
@@ -47,7 +50,8 @@
 				"stars": 0,
 				"forks": 0,
 				"updatedAt": "2023-10-04T01:46:30Z",
-				"isFork": false
+				"isFork": false,
+				"topics": ["TypeScript", "前端"]
 			},
 			{
 				"name": "user-center-backend",
@@ -57,7 +61,8 @@
 				"stars": 0,
 				"forks": 0,
 				"updatedAt": "2023-10-03T09:02:46Z",
-				"isFork": false
+				"isFork": false,
+				"topics": ["Java", "Spring Boot"]
 			},
 			{
 				"name": "Ulife",
@@ -67,19 +72,79 @@
 				"stars": 0,
 				"forks": 0,
 				"updatedAt": "2023-10-14T03:08:21Z",
-				"isFork": false
+				"isFork": false,
+				"topics": ["Java", "生活服务"]
+			}
+		],
+		"defaultView": "grid",
+		"gridColumns": 2,
+		"categories": ["参与项目", "个人项目", "学习项目"],
+		"projectMeta": [
+			{
+				"name": "K-Vault",
+				"category": "参与项目",
+				"tags": ["Cloudflare", "Serverless", "图床"]
+			},
+			{
+				"name": "Firefly",
+				"category": "参与项目",
+				"tags": ["Astro", "Svelte", "博客主题"]
+			},
+			{
+				"name": "TaskPlan",
+				"category": "个人项目",
+				"tags": ["TypeScript", "任务规划"]
+			},
+			{
+				"name": "user-center-front",
+				"category": "学习项目",
+				"tags": ["TypeScript", "前端"]
+			},
+			{
+				"name": "user-center-backend",
+				"category": "学习项目",
+				"tags": ["Java", "Spring Boot"]
+			},
+			{
+				"name": "Ulife",
+				"category": "个人项目",
+				"tags": ["Java", "生活服务"]
 			}
 		]
 	},
 	"skills": [
-		{ "name": "Astro", "icon": "simple-icons:astro" },
-		{ "name": "Svelte", "icon": "simple-icons:svelte" },
-		{ "name": "TypeScript", "icon": "simple-icons:typescript" },
-		{ "name": "Java", "icon": "simple-icons:openjdk" },
-		{ "name": "Spring", "icon": "simple-icons:spring" },
-		{ "name": "Cloudflare", "icon": "simple-icons:cloudflare" },
-		{ "name": "Docker", "icon": "simple-icons:docker" },
-		{ "name": "GitHub", "icon": "simple-icons:github" }
+		{
+			"name": "Astro",
+			"icon": "simple-icons:astro"
+		},
+		{
+			"name": "Svelte",
+			"icon": "simple-icons:svelte"
+		},
+		{
+			"name": "TypeScript",
+			"icon": "simple-icons:typescript"
+		},
+		{
+			"name": "Java",
+			"icon": "simple-icons:openjdk"
+		},
+		{
+			"name": "Spring",
+			"icon": "simple-icons:spring"
+		},
+		{
+			"name": "Cloudflare",
+			"icon": "simple-icons:cloudflare"
+		},
+		{
+			"name": "Docker",
+			"icon": "simple-icons:docker"
+		},
+		{
+			"name": "GitHub",
+			"icon": "simple-icons:github"
+		}
 	],
 	"sidebar": {
 		"showSkills": true,
@@ -101,6 +166,15 @@
 		"content": "欢迎来到我的博客！这里主要展示我的个人项目与技术实践。",
 		"closable": true,
 		"linkText": "了解更多",
+		"linkUrl": "/about/"
+	},
+	"statusEvent": {
+		"mode": "schedule",
+		"timezone": "Asia/Shanghai",
+		"workStart": 9,
+		"workEnd": 18,
+		"workingLabel": "上班中",
+		"restingLabel": "休息中",
 		"linkUrl": "/about/"
 	}
 }
