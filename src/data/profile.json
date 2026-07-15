@@ -4,9 +4,9 @@
 	"bio": "Hello, I'm Yiyu.",
 	"links": [
 		{
-			"name": "qq",
-			"icon": "fa7-brands:qq",
-			"url": "https://qm.qq.com/q/ZGsFa8qX2G",
+			"name": "bilibili",
+			"icon": "fa7-brands:bilibili",
+			"url": "https://space.bilibili.com/186774608?spm_id_from=333.1007.0.0",
 			"showName": false
 		},
 		{
@@ -19,12 +19,6 @@
 			"name": "Email",
 			"icon": "fa7-solid:envelope",
 			"url": "mailto:xiaye@msn.com",
-			"showName": false
-		},
-		{
-			"name": "RSS",
-			"icon": "fa7-solid:rss",
-			"url": "/rss/",
 			"showName": false
 		}
 	]
