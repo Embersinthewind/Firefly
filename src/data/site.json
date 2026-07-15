@@ -12,14 +12,14 @@
 		"技术博客",
 		"静态博客"
 	],
-	"siteStartDate": "2025-01-01",
+	"siteStartDate": "2026-07-14",
 	"theme": {
 		"hue": 165,
 		"fixed": false,
 		"defaultMode": "system"
 	},
 	"navbar": {
-		"title": "Firefly",
+		"title": "Yiyu的博客",
 		"logo": {
 			"type": "image",
 			"value": "assets/images/firefly.png",
