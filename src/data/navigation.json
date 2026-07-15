@@ -1,0 +1,372 @@
+{
+	"title": "网站导航",
+	"description": "收录个人网站、常用工具和收藏网站",
+	"categories": [
+		{
+			"id": "toolbox",
+			"name": "工具箱",
+			"items": [
+				{
+					"id": "ustc-speed",
+					"title": "网络工具｜中科大测速",
+					"url": "https://test.ustc.edu.cn/",
+					"description": "中科大提供的网络测速工具，用于快速测试本地带宽与网络延迟。"
+				},
+				{
+					"id": "itdog",
+					"title": "网络工具｜ITDOG",
+					"url": "https://www.itdog.cn/",
+					"description": "在线网络工具箱，支持 Ping、TCPing、网站测速、HTTP 测速与路由追踪。"
+				},
+				{
+					"id": "phototool",
+					"title": "图片处理｜在线图像工具箱",
+					"url": "https://phototool.cn/",
+					"description": "支持格式转换、压缩、裁剪与批量下载的在线图片处理工具。"
+				},
+				{
+					"id": "saucenao",
+					"title": "图片查找｜SauceNAO",
+					"url": "https://saucenao.com/",
+					"description": "以图搜图引擎，适合查找动漫插画、同人图等图片来源。"
+				},
+				{
+					"id": "stardots",
+					"title": "图床｜StarDots",
+					"url": "https://dashboard.stardots.io/",
+					"description": "一站式图片托管与 CDN 加速平台，支持图片管理、转换与分发。"
+				},
+				{
+					"id": "koukoutu",
+					"title": "抠图｜抠抠图",
+					"url": "https://www.koukoutu.com/",
+					"description": "免费 AI 在线抠图工具，支持自动去背景与透明 PNG 生成。"
+				},
+				{
+					"id": "adworker",
+					"title": "GIF 背景移除｜AdWorker",
+					"url": "https://adworker.ai/",
+					"description": "在线 GIF 动图背景去除工具，支持自动识别并移除背景。"
+				},
+				{
+					"id": "patorjk",
+					"title": "PatorJK",
+					"url": "https://patorjk.com/",
+					"description": "在线 ASCII 艺术字生成器，并提供多种轻量实用工具。"
+				}
+			]
+		},
+		{
+			"id": "ai-assistant",
+			"name": "AI 助手",
+			"items": [
+				{
+					"id": "doubao",
+					"title": "豆包",
+					"url": "https://www.doubao.com/",
+					"description": "字节跳动推出的 AI 助手，支持对话、写作、翻译与编程辅助。"
+				},
+				{
+					"id": "chatgpt",
+					"title": "ChatGPT",
+					"url": "https://chatgpt.com/",
+					"description": "OpenAI 开发的对话式 AI，适用于写作、编程、分析与日常问答。"
+				},
+				{
+					"id": "claude",
+					"title": "Claude",
+					"url": "https://claude.ai/",
+					"description": "Anthropic 开发的 AI 助手，擅长长文本理解、代码分析与推理。"
+				},
+				{
+					"id": "gemini",
+					"title": "Gemini",
+					"url": "https://gemini.google.com/",
+					"description": "Google 推出的多模态 AI，支持文本、图片理解与代码生成。"
+				},
+				{
+					"id": "grok",
+					"title": "Grok",
+					"url": "https://grok.com/",
+					"description": "xAI 开发的 AI 助手，支持实时搜索、图像生成与深度推理。"
+				}
+			]
+		},
+		{
+			"id": "ai-tools",
+			"name": "AI 工具",
+			"items": [
+				{
+					"id": "artificial-analysis",
+					"title": "能力排行｜Artificial Analysis",
+					"url": "https://artificialanalysis.ai/",
+					"description": "AI 模型推理能力与性能对比平台。"
+				},
+				{
+					"id": "arena",
+					"title": "能力排行｜AI Arena",
+					"url": "https://arena.ai/",
+					"description": "通过匿名对战综合对比主流大模型的实际表现。"
+				},
+				{
+					"id": "modelscope",
+					"title": "ModelScope 魔搭社区",
+					"url": "https://www.modelscope.cn/",
+					"description": "开源模型社区，提供丰富的 AI 模型、数据集与推理服务。"
+				},
+				{
+					"id": "skillsmp",
+					"title": "技能市场｜Skills Marketplace",
+					"url": "https://skillsmp.com/",
+					"description": "发现和分享 AI 技能、提示词与自动化工作流。"
+				},
+				{
+					"id": "promptpilot",
+					"title": "提示词优化｜PromptPilot",
+					"url": "https://promptpilot.volcengine.com/",
+					"description": "帮助改善提示词结构并提升大模型输出质量。"
+				},
+				{
+					"id": "acgn-ai",
+					"title": "资源站｜ACGN AI",
+					"url": "https://res.acgnai.top/",
+					"description": "ACGN 方向的 AI 资源聚合站，提供模型、工具与教程。"
+				},
+				{
+					"id": "oblivion-gallery",
+					"title": "图像生成｜Oblivion Gallery",
+					"url": "https://image.oblivionis.net/",
+					"description": "展示高质量 AI 生成图像的在线画廊。"
+				},
+				{
+					"id": "figma",
+					"title": "设计工具｜Figma",
+					"url": "https://www.figma.com/",
+					"description": "在线 UI/UX 设计协作工具，支持团队协作与 AI 辅助。"
+				},
+				{
+					"id": "google-ai-studio",
+					"title": "开发工具｜Google AI Studio",
+					"url": "https://aistudio.google.com/",
+					"description": "Google 官方 AI 开发平台，可快速原型化 Gemini 应用。"
+				},
+				{
+					"id": "google-stitch",
+					"title": "设计工具｜Google Stitch",
+					"url": "https://stitch.withgoogle.com/",
+					"description": "用文字或图片生成界面并导出代码的 AI 原生设计工具。"
+				},
+				{
+					"id": "ollama",
+					"title": "模型部署｜Ollama",
+					"url": "https://ollama.com/",
+					"description": "在本地运行 Llama、Qwen 等开源大模型的轻量框架。"
+				}
+			]
+		},
+		{
+			"id": "ai-bot",
+			"name": "AI BOT",
+			"items": [
+				{
+					"id": "napcat",
+					"title": "NapCat",
+					"url": "https://napneko.github.io/",
+					"description": "基于 NTQQ 的 QQ 机器人框架，支持插件扩展与多协议接入。"
+				},
+				{
+					"id": "astrbot",
+					"title": "AstrBot",
+					"url": "https://astrbot.app/",
+					"description": "支持 QQ、Discord、Telegram 等平台的聊天机器人框架。"
+				},
+				{
+					"id": "mai-bot",
+					"title": "Mai-bot",
+					"url": "https://docs.mai-mai.org/",
+					"description": "面向音乐游戏社区的机器人项目与相关文档。"
+				},
+				{
+					"id": "nonebot",
+					"title": "NoneBot",
+					"url": "https://nonebot.dev/",
+					"description": "Python 异步机器人框架，拥有多平台适配器与插件生态。"
+				},
+				{
+					"id": "llbot",
+					"title": "LLBot",
+					"url": "https://github.com/LLOneBot/LLOneBot",
+					"description": "基于 NTQQ 的轻量 QQ 机器人框架，支持 OneBot 协议。"
+				}
+			]
+		},
+		{
+			"id": "frontend",
+			"name": "前端组件库",
+			"items": [
+				{
+					"id": "one-page-love",
+					"title": "单页设计｜One Page Love",
+					"url": "https://onepagelove.com/",
+					"description": "单页网站设计灵感库，汇集 Landing Page 模板与案例。"
+				},
+				{
+					"id": "mobbin",
+					"title": "移动端设计｜Mobbin",
+					"url": "https://mobbin.com/",
+					"description": "移动端 UI 设计参考库，收录大量 App 界面与交互模式。"
+				},
+				{
+					"id": "awwwards",
+					"title": "设计作品｜Awwwards",
+					"url": "https://www.awwwards.com/",
+					"description": "全球优秀网页设计作品评选与创意灵感平台。"
+				},
+				{
+					"id": "shadcn",
+					"title": "组件库｜shadcn/ui",
+					"url": "https://ui.shadcn.com/",
+					"description": "基于 Radix UI 和 Tailwind CSS 的 React 组件集合。"
+				},
+				{
+					"id": "heroui",
+					"title": "组件库｜HeroUI",
+					"url": "https://www.heroui.com/",
+					"description": "基于 Tailwind CSS 的高性能 React UI 组件库。"
+				},
+				{
+					"id": "uiverse",
+					"title": "组件社区｜Uiverse",
+					"url": "https://uiverse.io/",
+					"description": "社区驱动的开源 UI 元素库，提供可复用的交互组件。"
+				},
+				{
+					"id": "codepen",
+					"title": "在线演示｜CodePen",
+					"url": "https://codepen.io/",
+					"description": "实时编写、预览和分享 HTML、CSS、JavaScript 代码。"
+				},
+				{
+					"id": "react-bits",
+					"title": "React Bits",
+					"url": "https://www.reactbits.dev/",
+					"description": "React 组件与 Hook 精选集合，适合快速组合交互界面。"
+				},
+				{
+					"id": "magic-ui",
+					"title": "Magic UI",
+					"url": "https://magicui.design/",
+					"description": "提供可直接复用的 React 动效和界面组件。"
+				},
+				{
+					"id": "aceternity",
+					"title": "Aceternity UI",
+					"url": "https://ui.aceternity.com/",
+					"description": "现代 React 动画组件库，聚焦高质量交互效果。"
+				},
+				{
+					"id": "iconify",
+					"title": "图标库｜Iconify",
+					"url": "https://iconify.design/",
+					"description": "统一图标框架，支持大量图标集与按需加载。"
+				},
+				{
+					"id": "sketchfab",
+					"title": "3D 模型｜Sketchfab",
+					"url": "https://sketchfab.com/",
+					"description": "大型 3D 模型展示与分享平台，支持在线预览。"
+				}
+			]
+		},
+		{
+			"id": "learning",
+			"name": "学习知识库",
+			"items": [
+				{
+					"id": "pdai",
+					"title": "Java 全栈知识体系",
+					"url": "https://pdai.tech/",
+					"description": "涵盖 Java、并发、JVM、框架、数据库与架构的知识体系。"
+				},
+				{
+					"id": "javaguide",
+					"title": "JavaGuide",
+					"url": "https://javaguide.cn/",
+					"description": "Java 学习与面试指南，覆盖基础、并发、JVM 与 Spring。"
+				},
+				{
+					"id": "exception-site",
+					"title": "异常教程",
+					"url": "https://www.exception.site/",
+					"description": "面向开发工具与日常编程环境的教程资源。"
+				},
+				{
+					"id": "leetcode",
+					"title": "力扣 LeetCode",
+					"url": "https://leetcode.cn/",
+					"description": "算法练习与技术成长平台，提供题库、竞赛和面试题。"
+				},
+				{
+					"id": "nowcoder",
+					"title": "牛客网",
+					"url": "https://www.nowcoder.com/",
+					"description": "IT 求职备考与技术学习平台，提供笔面试题和在线编程。"
+				}
+			]
+		},
+		{
+			"id": "anime",
+			"name": "动漫&漫画",
+			"items": [
+				{
+					"id": "agedm",
+					"title": "AGE 动漫",
+					"url": "https://www.agedm.io/",
+					"description": "动漫资讯与内容索引网站。"
+				},
+				{
+					"id": "manhwatop",
+					"title": "ManhwaTop",
+					"url": "https://manhwatop.com/",
+					"description": "漫画作品索引与阅读平台。"
+				}
+			]
+		},
+		{
+			"id": "api",
+			"name": "API 接口",
+			"items": [
+				{
+					"id": "xxapi",
+					"title": "小小 API",
+					"url": "https://xxapi.cn/",
+					"description": "提供多种聚合数据接口的免费 API 平台。"
+				},
+				{
+					"id": "amap",
+					"title": "高德地图 API",
+					"url": "https://lbs.amap.com/",
+					"description": "高德地图开放平台，提供地图、定位与导航能力。"
+				},
+				{
+					"id": "juhe",
+					"title": "聚合数据",
+					"url": "https://www.juhe.cn/",
+					"description": "提供短信、物流、新闻等多种数据服务接口。"
+				},
+				{
+					"id": "youdao-api",
+					"title": "有道翻译 API",
+					"url": "https://ai.youdao.com/",
+					"description": "网易有道提供的多语言文本翻译与智能服务接口。"
+				},
+				{
+					"id": "tavily",
+					"title": "Tavily",
+					"url": "https://app.tavily.com/",
+					"description": "为 AI 应用与大模型提供实时网页检索能力。"
+				}
+			]
+		}
+	]
+}

@@ -20,14 +20,29 @@ if (!link) {
 const processedLink = link;
 
 const hasChildren = processedLink.children && processedLink.children.length > 0;
+const normalizePath = (value: string) => {
+	if (!value || value === "#" || /^https?:\/\//.test(value)) return "";
+	const path = value.split(/[?#]/)[0] || "/";
+	return path === "/" ? "/" : `${path.replace(/^\/+|\/+$/g, "")}/`;
+};
+const currentPath = normalizePath(Astro.url.pathname);
+const matchesCurrentPath = (value: string) => {
+	const target = normalizePath(value);
+	if (!target) return false;
+	return target === "/" ? currentPath === "/" : currentPath.startsWith(target);
+};
+const isActive = hasChildren
+	? processedLink.children?.some((child) => matchesCurrentPath(child.url))
+	: matchesCurrentPath(processedLink.url);
 ---
 
-<div class:list={["dropdown-container", className]} data-dropdown>
+<div class:list={["dropdown-container", "navbar-nav-item", isActive && "is-active", className]} data-dropdown>
 	{hasChildren ? (
 		<button 
 			class="btn-plain scale-animation rounded-lg h-10 font-bold px-4 pr-8 active:scale-95 dropdown-trigger relative"
 			aria-expanded="false"
 			aria-haspopup="true"
+			aria-current={isActive ? "page" : undefined}
 			data-dropdown-trigger
 		>
 			<div class="flex items-center gap-1.5">
@@ -59,6 +74,7 @@ const hasChildren = processedLink.children && processedLink.children.length > 0;
 			aria-label={processedLink.name} 
 			href={processedLink.external ? processedLink.url : url(processedLink.url)} 
 			target={processedLink.external ? "_blank" : null}
+			aria-current={isActive ? "page" : undefined}
 			class="btn-plain scale-animation rounded-lg h-10 font-bold px-4 active:scale-95"
 		>
 			<div class="flex items-center gap-1.5">

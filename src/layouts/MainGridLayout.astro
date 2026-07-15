@@ -13,6 +13,7 @@ import FloatingControls from "@/components/controls/FloatingControls.astro";
 import ScrollDownIndicator from "@/components/controls/ScrollDownIndicator.astro";
 import BackgroundPlayer from "@/components/features/BackgroundPlayer.astro";
 import TypewriterText from "@/components/features/TypewriterText.astro";
+import HomeHeroOverlay from "@/components/home/HomeHeroOverlay.astro";
 import CategoryBar from "@/components/layout/CategoryBar.astro";
 import {
 	backgroundWallpaper,
@@ -622,28 +623,22 @@ const hasMultipleImages =
     <div id="banner-overlay-container" class="absolute inset-0 z-20 pointer-events-none transition-swup-fade">    <!-- Home page text overlay - 始终渲染以便切换模式时控制显示 -->
     {homeTextEnable && (
         <div class={`banner-home-text-overlay absolute inset-0 z-20 flex items-center justify-center ${!showHomeText ? 'hidden' : ''}`}>
-            <div class="w-4/5 lg:w-3/4 text-center mb-0">
-                <div class="flex flex-col">
-                    {backgroundWallpaper.common?.homeText?.title && (
-                        <div class="banner-title font-bold text-white mb-2 lg:mb-4 leading-tight" style={{ '--banner-title-size': backgroundWallpaper.common.homeText.titleSize || "3rem" }}>
-                            {backgroundWallpaper.common.homeText.title}
-                        </div>
-                    )}
-                    {backgroundWallpaper.common?.homeText?.subtitle && (
-                        <div id="banner-subtitle" class="banner-subtitle text-white/90 leading-snug" style={{ fontSize: backgroundWallpaper.common.homeText.subtitleSize || "1.5rem" }} data-subtitles={JSON.stringify(backgroundWallpaper.common.homeText.subtitle)}>
-                            {backgroundWallpaper.common.homeText.typewriter?.enable ? (
-                                <TypewriterText
-                                    text={backgroundWallpaper.common.homeText.subtitle}
-                                    speed={backgroundWallpaper.common.homeText.typewriter.speed}
-                                    deleteSpeed={backgroundWallpaper.common.homeText.typewriter.deleteSpeed}
-                                    pauseTime={backgroundWallpaper.common.homeText.typewriter.pauseTime}
-                                />
-                            ) : (
-                                randomSubtitle
-                            )}
-                        </div>
-                    )}
-                </div>
+            <HomeHeroOverlay />
+            <div class="legacy-banner-text hidden">
+                {backgroundWallpaper.common?.homeText?.subtitle && (
+                    <div id="banner-subtitle" data-subtitles={JSON.stringify(backgroundWallpaper.common.homeText.subtitle)}>
+                        {backgroundWallpaper.common.homeText.typewriter?.enable ? (
+                            <TypewriterText
+                                text={backgroundWallpaper.common.homeText.subtitle}
+                                speed={backgroundWallpaper.common.homeText.typewriter.speed}
+                                deleteSpeed={backgroundWallpaper.common.homeText.typewriter.deleteSpeed}
+                                pauseTime={backgroundWallpaper.common.homeText.typewriter.pauseTime}
+                            />
+                        ) : (
+                            randomSubtitle
+                        )}
+                    </div>
+                )}
             </div>
         </div>
     )}

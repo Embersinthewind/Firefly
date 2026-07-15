@@ -1,0 +1,433 @@
+---
+import type { CollectionEntry } from "astro:content";
+import { Icon } from "astro-icon/components";
+import { profileConfig, siteConfig } from "@/config";
+import {
+	getCategoryList,
+	getSortedPosts,
+	getTagList,
+} from "@/utils/content-utils";
+import { getPostUrlBySlug, url } from "@/utils/url-utils";
+
+interface Props {
+	posts: CollectionEntry<"posts">[];
+	total: number;
+}
+
+const { total } = Astro.props;
+const allPosts = await getSortedPosts();
+const categories = await getCategoryList();
+const tags = await getTagList();
+const latest = allPosts.slice(0, 4);
+const totalWords = allPosts.reduce((sum, post) => {
+	const text = String(post.body ?? "");
+	const cjk = (text.match(/[\u4e00-\u9fff]/g) ?? []).length;
+	const words = text
+		.replace(/[\u4e00-\u9fff]/g, " ")
+		.trim()
+		.split(/\s+/)
+		.filter(Boolean).length;
+	return sum + cjk + words;
+}, 0);
+
+const stats = [
+	{ label: "文章", value: total },
+	{ label: "分类", value: categories.length },
+	{ label: "标签", value: tags.length },
+	{ label: "总字数", value: totalWords.toLocaleString("zh-CN") },
+];
+
+const featureCards = [
+	{
+		kicker: "VISITS",
+		title: "访问轨迹.",
+		description: "访客、浏览与读者路径会在这里汇总，给站点运营留下清晰线索。",
+		meta: "SOURCE / Waline",
+		icon: "material-symbols:route-outline",
+	},
+	{
+		kicker: "ARCHIVE",
+		title: "内容索引.",
+		description: `${total} 篇文章 / ${categories.length} 个分类 / ${tags.length} 个标签`,
+		meta: "POSTS / TAGS / CATEGORIES",
+		icon: "material-symbols:inventory-2-rounded",
+	},
+	{
+		kicker: "CONTACT",
+		title: "社交联系.",
+		description: "把散落的入口收束在一条缓慢移动的轨道里。",
+		meta: profileConfig.links.map((link) => link.name).join(" / "),
+		icon: "material-symbols:alternate-email",
+	},
+];
+
+const skills = [
+	"Astro",
+	"Svelte",
+	"TypeScript",
+	"Tailwind",
+	"Cloudflare",
+	"Markdown",
+	"K-Vault",
+	"Pagefind",
+	"GitHub",
+	"AI Writing",
+];
+---
+
+<section class="home-showcase card-base" aria-labelledby="home-showcase-title">
+	<header class="home-showcase__intro">
+		<div>
+			<p>BLOG</p>
+			<h2 id="home-showcase-title">博客 {siteConfig.title} ✦ CREATIVE</h2>
+			<span>システム起動完了</span>
+		</div>
+		<a href={url("/articles/")}>
+			全部文章
+			<Icon is:inline name="material-symbols:arrow-forward-rounded" />
+		</a>
+	</header>
+
+	<div class="home-showcase__ticker" aria-label="站点公告">
+		<div>
+			<span>[欢迎] 欢迎来自远方的朋友！</span>
+			<span>[公告] 欢迎来到我的博客！</span>
+			<span>[更新] 最近文章已同步完成</span>
+			<span>[图床] K-Vault 写作流已接入</span>
+		</div>
+	</div>
+
+	<div class="home-showcase__stats" aria-label="站点数据">
+		{stats.map((item) => (
+			<div>
+				<strong>{item.value}</strong>
+				<span>{item.label}</span>
+			</div>
+		))}
+	</div>
+
+	<div class="home-showcase__grid">
+		<section class="home-showcase__panel home-showcase__panel--wide">
+			<p>CONTEXT</p>
+			<h3>站点数据</h3>
+			<div class="home-showcase__latest">
+				{latest.map((post) => (
+					<a href={getPostUrlBySlug(post.id)}>
+						<span>{post.data.category || "文章"}</span>
+						<strong>{post.data.title}</strong>
+						<time datetime={post.data.published.toISOString()}>
+							{post.data.published.toLocaleDateString("zh-CN")}
+						</time>
+					</a>
+				))}
+			</div>
+		</section>
+
+		<section class="home-showcase__panel">
+			<p>SKILLS</p>
+			<h3>能力矩阵</h3>
+			<div class="home-showcase__skills">
+				{skills.map((skill) => <span>{skill}</span>)}
+			</div>
+		</section>
+	</div>
+
+	<div class="home-showcase__features">
+		{featureCards.map((card, index) => (
+			<article class="home-showcase__feature">
+				<Icon is:inline name={card.icon} />
+				<div>
+					<p>{String(index + 1).padStart(2, "0")} SYSTEM / {card.kicker}</p>
+					<h3>{card.title}</h3>
+					<span>{card.description}</span>
+					<small>{card.meta}</small>
+				</div>
+			</article>
+		))}
+	</div>
+</section>
+
+<style>
+	.home-showcase {
+		position: relative;
+		overflow: hidden;
+		padding: 1.2rem;
+		margin-bottom: 1rem;
+		background:
+			linear-gradient(135deg, color-mix(in oklch, var(--primary) 10%, transparent), transparent 42%),
+			var(--card-bg);
+	}
+
+	.home-showcase::before {
+		position: absolute;
+		inset: 0;
+		background-image:
+			linear-gradient(color-mix(in oklch, var(--primary) 14%, transparent) 1px, transparent 1px),
+			linear-gradient(90deg, color-mix(in oklch, var(--primary) 10%, transparent) 1px, transparent 1px);
+		background-size: 4rem 4rem;
+		opacity: 0.38;
+		pointer-events: none;
+		content: "";
+	}
+
+	.home-showcase > * {
+		position: relative;
+		z-index: 1;
+	}
+
+	.home-showcase__intro {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 1rem;
+		padding: 0.35rem 0.35rem 1rem;
+		border-bottom: 1px solid var(--line-divider);
+	}
+
+	.home-showcase__intro p,
+	.home-showcase__panel p,
+	.home-showcase__feature p {
+		margin: 0;
+		color: var(--primary);
+		font-size: 0.72rem;
+		font-weight: 850;
+		letter-spacing: 0.08em;
+	}
+
+	.home-showcase__intro h2,
+	.home-showcase__panel h3,
+	.home-showcase__feature h3 {
+		margin: 0.18rem 0 0;
+		color: var(--deep-text);
+		letter-spacing: -0.025em;
+		text-wrap: balance;
+	}
+
+	.home-showcase__intro h2 {
+		font-size: 1.65rem;
+		line-height: 1.2;
+	}
+
+	.home-showcase__intro span,
+	.home-showcase__panel,
+	.home-showcase__feature span,
+	.home-showcase__feature small {
+		color: var(--content-meta);
+	}
+
+	.home-showcase__intro > a {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.35rem;
+		min-height: 2.25rem;
+		padding: 0.45rem 0.8rem;
+		border-radius: 999px;
+		background: var(--btn-regular-bg);
+		color: var(--deep-text);
+		font-size: 0.8rem;
+		font-weight: 800;
+		white-space: nowrap;
+	}
+
+	.home-showcase__ticker {
+		overflow: hidden;
+		margin: 1rem 0;
+		border-block: 1px solid var(--line-divider);
+		color: var(--deep-text);
+		font-size: 0.78rem;
+		font-weight: 750;
+		white-space: nowrap;
+	}
+
+	.home-showcase__ticker div {
+		display: inline-flex;
+		gap: 2.5rem;
+		padding: 0.65rem 0;
+		animation: home-showcase-ticker 24s linear infinite;
+	}
+
+	.home-showcase__stats {
+		display: grid;
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+		border: 1px solid var(--line-divider);
+		border-radius: 0.8rem;
+	}
+
+	.home-showcase__stats div {
+		padding: 1rem;
+		border-right: 1px solid var(--line-divider);
+	}
+
+	.home-showcase__stats div:last-child {
+		border-right: 0;
+	}
+
+	.home-showcase__stats strong {
+		display: block;
+		color: var(--deep-text);
+		font-size: 1.4rem;
+		line-height: 1;
+	}
+
+	.home-showcase__stats span {
+		display: block;
+		margin-top: 0.35rem;
+		color: var(--content-meta);
+		font-size: 0.74rem;
+		font-weight: 700;
+	}
+
+	.home-showcase__grid,
+	.home-showcase__features {
+		display: grid;
+		grid-template-columns: minmax(0, 1.25fr) minmax(16rem, 0.75fr);
+		gap: 1rem;
+		margin-top: 1rem;
+	}
+
+	.home-showcase__features {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+	}
+
+	.home-showcase__panel,
+	.home-showcase__feature {
+		min-width: 0;
+		border: 1px solid var(--line-divider);
+		border-radius: 0.9rem;
+		background: color-mix(in oklch, var(--card-bg) 86%, transparent);
+	}
+
+	.home-showcase__panel {
+		padding: 1rem;
+	}
+
+	.home-showcase__panel h3 {
+		font-size: 1.18rem;
+	}
+
+	.home-showcase__latest {
+		display: grid;
+		gap: 0.55rem;
+		margin-top: 1rem;
+	}
+
+	.home-showcase__latest a {
+		display: grid;
+		grid-template-columns: 4.5rem minmax(0, 1fr) auto;
+		gap: 0.75rem;
+		align-items: center;
+		padding: 0.75rem;
+		border-radius: 0.65rem;
+		background: var(--btn-regular-bg);
+		color: var(--deep-text);
+	}
+
+	.home-showcase__latest a:hover {
+		color: var(--primary);
+	}
+
+	.home-showcase__latest span,
+	.home-showcase__latest time {
+		color: var(--content-meta);
+		font-size: 0.72rem;
+		font-weight: 700;
+	}
+
+	.home-showcase__latest strong {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.home-showcase__skills {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.45rem;
+		margin-top: 1rem;
+	}
+
+	.home-showcase__skills span {
+		padding: 0.35rem 0.6rem;
+		border-radius: 999px;
+		background: var(--btn-regular-bg);
+		color: var(--deep-text);
+		font-size: 0.74rem;
+		font-weight: 760;
+	}
+
+	.home-showcase__feature {
+		display: grid;
+		grid-template-columns: auto minmax(0, 1fr);
+		gap: 0.9rem;
+		padding: 1rem;
+	}
+
+	.home-showcase__feature > :global(svg) {
+		width: 2.2rem;
+		height: 2.2rem;
+		padding: 0.45rem;
+		border-radius: 0.65rem;
+		background: var(--primary);
+		color: oklch(0.16 0.02 var(--hue));
+	}
+
+	.home-showcase__feature h3 {
+		font-size: 1.05rem;
+	}
+
+	.home-showcase__feature span,
+	.home-showcase__feature small {
+		display: block;
+		margin-top: 0.35rem;
+		font-size: 0.78rem;
+		line-height: 1.65;
+	}
+
+	.home-showcase__feature small {
+		font-weight: 760;
+	}
+
+	@keyframes home-showcase-ticker {
+		from {
+			transform: translateX(0);
+		}
+		to {
+			transform: translateX(-50%);
+		}
+	}
+
+	@media (max-width: 900px) {
+		.home-showcase__intro,
+		.home-showcase__grid,
+		.home-showcase__features {
+			grid-template-columns: 1fr;
+		}
+
+		.home-showcase__intro {
+			flex-direction: column;
+		}
+
+		.home-showcase__stats {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+
+		.home-showcase__stats div:nth-child(2) {
+			border-right: 0;
+		}
+
+		.home-showcase__stats div:nth-child(-n + 2) {
+			border-bottom: 1px solid var(--line-divider);
+		}
+
+		.home-showcase__latest a {
+			grid-template-columns: 1fr;
+			gap: 0.25rem;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.home-showcase__ticker div {
+			animation: none;
+		}
+	}
+</style>

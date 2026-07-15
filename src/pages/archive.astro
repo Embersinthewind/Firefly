@@ -3,8 +3,59 @@ import ArchivePanel from "@components/controls/ArchivePanel.astro";
 import I18nKey from "@i18n/i18nKey";
 import { i18n } from "@i18n/translation";
 import MainGridLayout from "@layouts/MainGridLayout.astro";
+import ArchiveHeatmap from "@/components/articles/ArchiveHeatmap.astro";
+import { getSortedPosts } from "@/utils/content-utils";
+
+const posts = await getSortedPosts();
 ---
 
 <MainGridLayout title={i18n(I18nKey.archive)}>
-  <ArchivePanel />
+	<section class="archive-workspace card-base">
+		<header class="archive-workspace__header">
+			<p>Archive</p>
+			<h1>归档</h1>
+			<span>沿着时间重新找到写过的内容。</span>
+		</header>
+		<ArchiveHeatmap posts={posts} />
+		<ArchivePanel />
+	</section>
 </MainGridLayout>
+
+<style>
+	.archive-workspace {
+		overflow: hidden;
+		margin-bottom: 1rem;
+	}
+
+	.archive-workspace__header {
+		padding: 1.5rem 1.5rem 0.35rem;
+	}
+
+	.archive-workspace__header p {
+		margin: 0 0 0.15rem;
+		color: var(--primary);
+		font-size: 0.78rem;
+		font-weight: 750;
+	}
+
+	.archive-workspace__header h1 {
+		margin: 0;
+		color: var(--deep-text);
+		font-size: 1.65rem;
+		line-height: 1.25;
+		letter-spacing: -0.025em;
+	}
+
+	.archive-workspace__header span {
+		display: block;
+		margin-top: 0.35rem;
+		color: var(--content-meta);
+		font-size: 0.875rem;
+	}
+
+	.archive-workspace :global(archive-panel.card-base) {
+		border-radius: 0;
+		background: transparent;
+		box-shadow: none;
+	}
+</style>

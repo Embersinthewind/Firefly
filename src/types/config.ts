@@ -22,6 +22,12 @@ export type {
 	NavBarSearchConfig,
 	NavBarSearchMethod,
 } from "./navBarConfig";
+export type {
+	NavigationCategory,
+	NavigationData,
+	NavigationGitHubConfig,
+	NavigationItem,
+} from "./navigationConfig";
 export type { Live2DWidgetConfig, SpineModelConfig } from "./pioConfig";
 export type { PlantUMLConfig } from "./plantumlConfig";
 export type { ProfileConfig } from "./profileConfig";

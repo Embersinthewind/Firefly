@@ -1,69 +1,172 @@
 ---
 import { Icon } from "astro-icon/components";
-import I18nKey from "@/i18n/i18nKey";
-import { i18n } from "@/i18n/translation";
 import MainGridLayout from "@/layouts/MainGridLayout.astro";
 import { getCategoryList } from "@/utils/content-utils";
 
 const categories = await getCategoryList();
-const totalPosts = categories.reduce((sum, cat) => sum + cat.count, 0);
+const totalPosts = categories.reduce(
+	(sum, category) => sum + category.count,
+	0,
+);
 ---
 
-<MainGridLayout title={i18n(I18nKey.categories)}>
-    <!-- 页面标题 -->
-    <div class="card-base px-8 py-6 mb-4">
-        <div class="text-2xl font-bold text-(--primary) mb-2">
-            {i18n(I18nKey.categories)}
-        </div>
-        <p class="text-30 text-sm">
-            {i18n(I18nKey.allCategories)} · {totalPosts} {i18n(I18nKey.postsCount)}
-        </p>
-    </div>
+<MainGridLayout title="分类" description={`共 ${categories.length} 个分类`}>
+	<section class="category-directory card-base" aria-labelledby="category-directory-title">
+		<header>
+			<p>Categories</p>
+			<h1 id="category-directory-title">分类</h1>
+			<span>{categories.length} 个分类 · {totalPosts} 篇文章</span>
+		</header>
 
-    <!-- 分类卡片列表 -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-        {
-            categories.map((category, index) => (
-                <a
-                    href={category.url}
-                    class="card-base p-6 flex items-center gap-4 group onload-animation"
-                    style={`animation-delay: calc(var(--content-delay) + ${index * 50}ms);`}
-                >
-                    <div class="shrink-0 w-14 h-14 rounded-full bg-(--primary)/10 group-hover:bg-(--primary)/20 flex items-center justify-center transition-colors">
-                        <Icon is:inline
-                            name="material-symbols:folder-open"
-                            class="text-3xl text-(--primary)"
-                        />
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <h2 class="text-lg font-bold text-90 truncate group-hover:text-(--primary) transition-colors" title={category.name}>
-                            {category.name}
-                        </h2>
-                        <p class="text-sm text-30 mt-1 group-hover:text-(--primary)/60 transition-colors">
-                            {category.count} {i18n(I18nKey.postsCount)}
-                        </p>
-                    </div>
-                    <div class="shrink-0">
-                        <Icon is:inline
-                            name="material-symbols:chevron-right-rounded"
-                            class="text-2xl text-30 group-hover:text-(--primary) transition-colors "
-                        />
-                    </div>
-                </a>
-            ))
-        }
-    </div>
-
-    <!-- 空状态 -->
-    {
-        categories.length === 0 && (
-            <div class="card-base px-8 py-12 text-center">
-                <Icon is:inline
-                    name="material-symbols:folder-off"
-                    class="text-5xl text-30 mx-auto mb-4"
-                />
-                <p class="text-30">{i18n(I18nKey.noData)}</p>
-            </div>
-        )
-    }
+		{
+			categories.length > 0 ? (
+				<div class="category-directory__grid">
+					{categories.map((category) => (
+						<a href={category.url} class="category-directory__item">
+							<span class="category-directory__icon">
+								<Icon is:inline name="material-symbols:folder-open-rounded" />
+							</span>
+							<span class="category-directory__copy">
+								<strong>{category.name}</strong>
+								<small>{category.count} 篇文章</small>
+							</span>
+							<Icon is:inline name="material-symbols:chevron-right-rounded" class="category-directory__arrow" />
+						</a>
+					))}
+				</div>
+			) : (
+				<div class="category-directory__empty">
+					<Icon is:inline name="material-symbols:folder-off-outline-rounded" />
+					<p>发布文章并填写分类后，这里会自动生成目录。</p>
+				</div>
+			)
+		}
+	</section>
 </MainGridLayout>
+
+<style>
+	.category-directory {
+		padding: 1.5rem;
+	}
+
+	.category-directory header {
+		padding: 0 0.25rem 1.25rem;
+		border-bottom: 1px solid var(--line-divider);
+	}
+
+	.category-directory header p {
+		margin: 0 0 0.15rem;
+		color: var(--primary);
+		font-size: 0.78rem;
+		font-weight: 750;
+	}
+
+	.category-directory h1 {
+		margin: 0;
+		color: var(--deep-text);
+		font-size: 1.65rem;
+		line-height: 1.25;
+		letter-spacing: -0.025em;
+	}
+
+	.category-directory header span {
+		display: block;
+		margin-top: 0.35rem;
+		color: var(--content-meta);
+		font-size: 0.875rem;
+	}
+
+	.category-directory__grid {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		column-gap: 2rem;
+		padding-top: 0.5rem;
+	}
+
+	.category-directory__item {
+		display: flex;
+		align-items: center;
+		gap: 0.9rem;
+		min-width: 0;
+		min-height: 5.6rem;
+		padding: 1rem 0.25rem;
+		border-bottom: 1px solid var(--line-divider);
+		color: var(--deep-text);
+		transition: color 180ms ease-out, transform 180ms ease-out;
+	}
+
+	.category-directory__item:hover {
+		color: var(--primary);
+		transform: translateX(2px);
+	}
+
+	.category-directory__icon {
+		display: grid;
+		place-items: center;
+		width: 2.8rem;
+		height: 2.8rem;
+		flex: 0 0 auto;
+		border-radius: 50%;
+		background: var(--btn-regular-bg);
+		color: var(--btn-content);
+		font-size: 1.3rem;
+	}
+
+	.category-directory__copy {
+		display: flex;
+		min-width: 0;
+		flex: 1;
+		flex-direction: column;
+		gap: 0.2rem;
+	}
+
+	.category-directory__copy strong {
+		overflow: hidden;
+		font-size: 1rem;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.category-directory__copy small {
+		color: var(--content-meta);
+		font-size: 0.78rem;
+	}
+
+	.category-directory__arrow {
+		flex: 0 0 auto;
+		color: var(--content-meta);
+		font-size: 1.25rem;
+	}
+
+	.category-directory__empty {
+		display: grid;
+		place-items: center;
+		min-height: 15rem;
+		color: var(--content-meta);
+		text-align: center;
+	}
+
+	.category-directory__empty :global(svg) {
+		font-size: 2.4rem;
+	}
+
+	@media (max-width: 720px) {
+		.category-directory {
+			padding: 1.1rem;
+		}
+
+		.category-directory__grid {
+			grid-template-columns: 1fr;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.category-directory__item {
+			transition: none;
+		}
+
+		.category-directory__item:hover {
+			transform: none;
+		}
+	}
+</style>

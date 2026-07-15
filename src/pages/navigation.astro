@@ -1,0 +1,16 @@
+---
+import WebsiteNavigation from "@/components/navigation/WebsiteNavigation.svelte";
+import { navigationConfig, navigationGitHubConfig } from "@/config";
+import MainGridLayout from "@/layouts/MainGridLayout.astro";
+---
+
+<MainGridLayout
+	title={navigationConfig.title}
+	description={navigationConfig.description}
+>
+	<WebsiteNavigation
+		client:load
+		initialData={navigationConfig}
+		githubConfig={navigationGitHubConfig}
+	/>
+</MainGridLayout>

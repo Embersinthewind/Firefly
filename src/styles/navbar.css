@@ -40,6 +40,68 @@
     @apply navbar-surface-transition;
 }
 
+#navbar {
+    --fq-nav-ink: color-mix(in oklch, var(--deep-text) 92%, black);
+    --fq-nav-pill: color-mix(in oklch, var(--card-bg) 42%, transparent);
+    --fq-nav-pill-hover: color-mix(in oklch, var(--card-bg) 66%, transparent);
+}
+
+#navbar .btn-plain {
+    border-radius: 0.72rem;
+    color: var(--fq-nav-ink);
+    font-weight: 850;
+    letter-spacing: -0.018em;
+}
+
+#navbar .btn-plain:hover,
+#navbar .dropdown-container:hover .dropdown-trigger,
+#navbar .dropdown-container:focus-within .dropdown-trigger {
+    background: var(--fq-nav-pill-hover);
+    color: var(--deep-text);
+}
+
+#navbar .navbar-brand-pill,
+#navbar .navbar-brand-pill:hover {
+    background: var(--fq-nav-pill);
+}
+
+#navbar .navbar-icon {
+    filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.14));
+}
+
+#navbar .dropdown-content {
+    border-radius: 0.8rem;
+    background: color-mix(in oklch, var(--card-bg) 92%, transparent);
+    backdrop-filter: blur(18px);
+}
+
+#navbar .navbar-tools__panel {
+    min-width: 10rem;
+}
+
+#navbar .navbar-theme-button::after {
+    content: "主题";
+    margin-left: 0.35rem;
+    font-size: 0.82rem;
+}
+
+#navbar .navbar-theme-button {
+    width: auto;
+    padding-inline: 0.75rem;
+}
+
+@media (max-width: 1023px) {
+    #navbar .navbar-theme-button::after {
+        content: "";
+        margin: 0;
+    }
+
+    #navbar .navbar-theme-button {
+        width: 2.75rem;
+        padding-inline: 0;
+    }
+}
+
 
 /* 通用滚动阴影：用于提升导航栏与页面内容的分层感 */
 #navbar.navbar-sticky-shadow>div {
@@ -316,5 +378,89 @@ body.wallpaper-transparent #navbar-wrapper #navbar[data-full-width="true"] > div
 @media (max-width: 1279px) {
     .navbar-icon {
         display: none !important;
+    }
+}
+
+/* fqzlr 风格：桌面端将品牌、主导航、快捷操作拆成三个悬浮胶囊。 */
+@media (min-width: 1024px) {
+    #navbar>div,
+    #wallpaper-wrapper~* #navbar[data-transparent-mode]>div,
+    body:has(#wallpaper-wrapper) #navbar[data-transparent-mode]>div,
+    #wallpaper-wrapper~* #navbar[data-transparent-mode].scrolled>div,
+    body:has(#wallpaper-wrapper) #navbar[data-transparent-mode].scrolled>div,
+    :root.dark #wallpaper-wrapper~* #navbar[data-transparent-mode]>div,
+    :root.dark body:has(#wallpaper-wrapper) #navbar[data-transparent-mode]>div,
+    :root.dark #wallpaper-wrapper~* #navbar[data-transparent-mode].scrolled>div,
+    :root.dark body:has(#wallpaper-wrapper) #navbar[data-transparent-mode].scrolled>div {
+        border: 0 !important;
+        border-radius: 0 !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        backdrop-filter: none !important;
+    }
+
+    #navbar .navbar-brand-pill,
+    #navbar .navbar-menu-pill,
+    #navbar .navbar-action-pill {
+        border: 1px solid color-mix(in oklch, var(--line-divider) 65%, transparent);
+        border-radius: 999px;
+        background: color-mix(in oklch, var(--card-bg) 92%, transparent);
+        box-shadow: 0 2px 8px rgb(0 0 0 / 0.07);
+        backdrop-filter: blur(16px);
+    }
+
+    #navbar .navbar-brand-pill {
+        height: 3rem;
+        padding-inline: 0.8rem 1rem;
+    }
+
+    #navbar .navbar-brand-pill img,
+    #navbar .navbar-brand-pill picture {
+        border-radius: 50%;
+    }
+
+    #navbar .navbar-menu-pill {
+        justify-self: center;
+        padding: 0.22rem;
+    }
+
+    #navbar .navbar-action-pill {
+        min-height: 3rem;
+        padding: 0.22rem 0.35rem;
+    }
+
+    #navbar .navbar-menu-pill .btn-plain {
+        height: 2.45rem;
+        padding-inline: 0.78rem;
+        border-radius: 999px;
+        font-size: 0.88rem;
+    }
+
+    #navbar .navbar-menu-pill .dropdown-trigger {
+        padding-right: 1.9rem;
+    }
+
+    #navbar .navbar-menu-pill .navbar-nav-item.is-active>.btn-plain,
+    #navbar .navbar-menu-pill .navbar-nav-item.is-active>.dropdown-trigger {
+        background: color-mix(in oklch, var(--deep-text) 12%, var(--card-bg));
+        color: var(--deep-text);
+    }
+
+    #navbar .navbar-menu-pill .dropdown-menu {
+        padding-top: 0.55rem;
+    }
+
+    #navbar .navbar-menu-pill .dropdown-content {
+        padding: 0.35rem;
+        border: 1px solid var(--line-divider);
+        border-radius: 0.72rem;
+        background: color-mix(in oklch, var(--card-bg) 96%, transparent);
+        box-shadow: 0 4px 8px rgb(0 0 0 / 0.1);
+    }
+
+    #navbar .navbar-menu-pill .dropdown-item {
+        border-radius: 0.48rem;
+        font-size: 0.84rem;
+        font-weight: 720;
     }
 }

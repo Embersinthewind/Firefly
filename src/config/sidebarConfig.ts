@@ -103,6 +103,19 @@ export const sidebarLayoutConfig: SidebarLayoutConfig = {
 	// 右侧边栏组件配置列表
 	rightComponents: [
 		{
+			// 日历放在右栏顶部，与参考站的三栏信息结构保持一致
+			type: "calendar",
+			enable: true,
+			showTitle: false,
+			position: "top",
+			showOnPostPage: false,
+			specificConfig: {
+				calendar: {
+					showHeatmap: false,
+				},
+			},
+		},
+		{
 			// 组件类型：站点统计组件
 			type: "stats",
 			// 是否启用该组件
@@ -126,25 +139,6 @@ export const sidebarLayoutConfig: SidebarLayoutConfig = {
 				siteInfo: {
 					// 未能识别的构建平台回退显示文本，可自定义
 					unknownBuildPlatform: "Unknown CI",
-				},
-			},
-		},
-		{
-			// 组件类型：日历组件
-			type: "calendar",
-			// 是否启用该组件
-			enable: true,
-			// 是否显示组件标题
-			showTitle: false,
-			// 组件位置
-			position: "sticky",
-			// 是否在文章详情页显示
-			showOnPostPage: false,
-			// 组件专属配置
-			specificConfig: {
-				calendar: {
-					// 是否显示年度文章热力图
-					showHeatmap: true,
 				},
 			},
 		},
