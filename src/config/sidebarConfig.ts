@@ -26,7 +26,7 @@ export const sidebarLayoutConfig: SidebarLayoutConfig = {
 		},
 		{
 			type: "music",
-			enable: true,
+			enable: false,
 			position: "sticky",
 			showOnPostPage: true,
 		},
@@ -112,7 +112,7 @@ export const sidebarLayoutConfig: SidebarLayoutConfig = {
 			enable: portfolioConfig.sidebar.showSkills,
 			showOnPostPage: true,
 		},
-		{ type: "music", enable: true, showOnPostPage: true },
+		{ type: "music", enable: false, showOnPostPage: true },
 		{
 			type: "categories",
 			enable: true,

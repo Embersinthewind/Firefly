@@ -1,7 +1,11 @@
 ---
 import type { CollectionEntry } from "astro:content";
 import { Icon } from "astro-icon/components";
-import { getPostUrlBySlug, url } from "@/utils/url-utils";
+import CoverImage from "@/components/common/CoverImage.astro";
+import { getCategoryList } from "@/utils/content-utils";
+import { formatDateToYYYYMMDD } from "@/utils/date-utils";
+import { getApiUrlList, processCoverImageSync } from "@/utils/image-utils";
+import { getFileDirFromPath, getPostUrlBySlug, url } from "@/utils/url-utils";
 
 interface Props {
 	posts: CollectionEntry<"posts">[];
@@ -9,252 +13,120 @@ interface Props {
 }
 
 const { posts, total } = Astro.props;
-
-const formatDate = (date: Date): string =>
-	new Intl.DateTimeFormat("zh-CN", {
-		year: "numeric",
-		month: "2-digit",
-		day: "2-digit",
-	}).format(date);
+const categories = await getCategoryList();
 ---
 
-<section class="article-library card-base" aria-labelledby="article-library-title">
-	<header class="article-library__header">
-		<div>
-			<p class="article-library__eyebrow">Articles</p>
-			<h1 id="article-library-title">文章列表</h1>
-			<p>共 {total} 篇文章，按发布时间从新到旧排列。</p>
+<section class="article-index" aria-labelledby="article-library-title">
+	<aside class="article-categories">
+		<div class="article-categories__panel">
+			<a class="article-categories__all" href={url("/articles/")}>全部文章 <strong>{total}</strong></a>
+			<nav aria-label="文章分类">
+				{
+					categories.map((category) => (
+						<a href={category.url}>
+							<span><Icon is:inline name="material-symbols:folder-outline-rounded" />{category.name}</span>
+							<strong>{category.count}</strong>
+							<Icon is:inline name="material-symbols:chevron-right-rounded" />
+						</a>
+					))
+				}
+			</nav>
 		</div>
-		<nav class="article-library__shortcuts" aria-label="文章视图">
-			<a href={url("/archive/")}>
-				<Icon is:inline name="material-symbols:archive-outline-rounded" />
-				归档
-			</a>
-			<a href={url("/categories/")}>
-				<Icon is:inline name="material-symbols:folder-open-outline" />
-				分类
-			</a>
-		</nav>
-	</header>
+		<div class="article-write">
+			<h2>写作</h2>
+			<a href={url("/write/")}><Icon is:inline name="material-symbols:add-rounded" />写新文章</a>
+		</div>
+	</aside>
 
-	<div class="article-library__grid">
-		{
-			posts.map((post) => (
-				<article class="article-library__item">
-					<a class="article-library__title" href={getPostUrlBySlug(post.id)}>
-						{post.data.title}
-					</a>
-					<div class="article-library__meta">
-						<span>
-							<Icon is:inline name="material-symbols:calendar-today-outline-rounded" />
-							{formatDate(post.data.published)}
-						</span>
-						{post.data.category && (
-							<a href={url(`/categories/${encodeURIComponent(post.data.category)}/`)}>
-								<Icon is:inline name="material-symbols:folder-outline-rounded" />
-								{post.data.category}
+	<div class="article-list">
+		<header class="article-list__header">
+			<div>
+				<span>ARTICLE INDEX</span>
+				<h1 id="article-library-title">文章列表</h1>
+			</div>
+			<p><strong>{total}</strong> 篇文章</p>
+		</header>
+
+		<div class="article-list__items">
+			{
+				posts.map((post) => {
+					const image = processCoverImageSync(post.data.image, post.id);
+					const apiUrls = getApiUrlList(post.data.image, post.id);
+					return (
+						<article class:list={["article-row", image && "article-row--cover"]}>
+							{image && (
+								<div class="article-row__image" aria-hidden="true">
+									<CoverImage
+										src={image}
+										basePath={getFileDirFromPath(post.filePath || "")}
+										alt=""
+										preview={true}
+										apiUrls={apiUrls}
+									/>
+								</div>
+							)}
+							<a class="article-row__body" href={getPostUrlBySlug(post.id)}>
+								<h2>{post.data.title}</h2>
+								<div class="article-row__meta">
+									{post.data.category && (
+										<span class="article-row__category">#{post.data.category}</span>
+									)}
+									<span><Icon is:inline name="material-symbols:calendar-month-outline-rounded" />{formatDateToYYYYMMDD(post.data.published)}</span>
+									{post.data.tags.slice(0, 3).map((tag) => <span>{tag}</span>)}
+									{post.data.tags.length > 3 && <span>+{post.data.tags.length - 3}</span>}
+								</div>
+								{post.data.description && <p>{post.data.description}</p>}
 							</a>
-						)}
-					</div>
-					{post.data.description && <p class="article-library__description">{post.data.description}</p>}
-					{post.data.tags.length > 0 && (
-						<ul class="article-library__tags" aria-label="标签">
-							{post.data.tags.slice(0, 5).map((tag) => (
-								<li>
-									<a href={url(`/tags/${encodeURIComponent(tag)}/`)}>#{tag}</a>
-								</li>
-							))}
-						</ul>
-					)}
-				</article>
-			))
-		}
+						</article>
+					);
+				})
+			}
+		</div>
 	</div>
+
+	<aside class="article-toc" aria-label="当前页面目录">
+		<h2>目录</h2>
+		<p>当前页面没有目录</p>
+	</aside>
 </section>
 
 <style>
-	.article-library {
-		padding: 1.25rem;
-		margin-bottom: 1rem;
-	}
-
-	.article-library__header {
-		display: flex;
-		align-items: end;
-		justify-content: space-between;
-		gap: 1.5rem;
-		padding: 0.25rem 0.25rem 1.25rem;
-		border-bottom: 1px solid var(--line-divider);
-	}
-
-	.article-library__eyebrow {
-		margin: 0 0 0.15rem;
-		color: var(--primary);
-		font-size: 0.78rem;
-		font-weight: 750;
-	}
-
-	.article-library h1 {
-		margin: 0;
-		color: var(--deep-text);
-		font-size: 1.65rem;
-		line-height: 1.25;
-		letter-spacing: -0.025em;
-	}
-
-	.article-library__header p:last-child {
-		margin: 0.35rem 0 0;
-		color: var(--content-meta);
-		font-size: 0.875rem;
-	}
-
-	.article-library__shortcuts {
-		display: flex;
-		gap: 0.5rem;
-	}
-
-	.article-library__shortcuts a {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.35rem;
-		min-height: 2.35rem;
-		padding: 0.45rem 0.75rem;
-		border: 1px solid var(--line-color);
-		border-radius: 0.55rem;
-		color: var(--deep-text);
-		font-size: 0.8125rem;
-		font-weight: 650;
-		transition: border-color 180ms ease-out, color 180ms ease-out, background-color 180ms ease-out;
-	}
-
-	.article-library__shortcuts a:hover {
-		border-color: var(--primary);
-		background: var(--btn-plain-bg-hover);
-		color: var(--primary);
-	}
-
-	.article-library__grid {
-		display: grid;
-		grid-template-columns: repeat(2, minmax(0, 1fr));
-		gap: 0;
-	}
-
-	.article-library__item {
-		display: flex;
-		min-width: 0;
-		min-height: 14rem;
-		flex-direction: column;
-		padding: 1.25rem;
-		border-bottom: 1px solid var(--line-divider);
-	}
-
-	.article-library__item:nth-child(odd) {
-		border-right: 1px solid var(--line-divider);
-	}
-
-	.article-library__title {
-		color: var(--deep-text);
-		font-size: 1.15rem;
-		font-weight: 760;
-		line-height: 1.45;
-		letter-spacing: -0.018em;
-		text-wrap: pretty;
-	}
-
-	.article-library__title:hover {
-		color: var(--primary);
-	}
-
-	.article-library__meta {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.75rem;
-		margin-top: 0.7rem;
-		color: var(--content-meta);
-		font-size: 0.75rem;
-	}
-
-	.article-library__meta span,
-	.article-library__meta a {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.3rem;
-	}
-
-	.article-library__meta a:hover {
-		color: var(--primary);
-	}
-
-	.article-library__description {
-		display: -webkit-box;
-		overflow: hidden;
-		margin: 0.75rem 0 1rem;
-		color: var(--content-meta);
-		font-size: 0.875rem;
-		line-height: 1.65;
-		-webkit-box-orient: vertical;
-		-webkit-line-clamp: 2;
-	}
-
-	.article-library__tags {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.4rem;
-		margin: auto 0 0;
-		padding: 0;
-		list-style: none;
-	}
-
-	.article-library__tags a {
-		display: inline-flex;
-		padding: 0.24rem 0.48rem;
-		border-radius: 0.35rem;
-		background: var(--btn-regular-bg);
-		color: var(--btn-content);
-		font-size: 0.72rem;
-		font-weight: 600;
-	}
-
-	.article-library__tags a:hover {
-		background: var(--btn-regular-bg-hover);
-	}
-
-	@media (min-width: 1440px) {
-		.article-library__grid {
-			grid-template-columns: repeat(3, minmax(0, 1fr));
-		}
-
-		.article-library__item:nth-child(odd) {
-			border-right: 0;
-		}
-
-		.article-library__item:not(:nth-child(3n)) {
-			border-right: 1px solid var(--line-divider);
-		}
-	}
-
-	@media (max-width: 720px) {
-		.article-library {
-			padding: 1rem;
-		}
-
-		.article-library__header {
-			align-items: flex-start;
-			flex-direction: column;
-		}
-
-		.article-library__grid {
-			grid-template-columns: 1fr;
-		}
-
-		.article-library__item {
-			min-height: 0;
-			padding-inline: 0.25rem;
-		}
-
-		.article-library__item:nth-child(odd),
-		.article-library__item:not(:nth-child(3n)) {
-			border-right: 0;
-		}
-	}
+	.article-index { display: grid; grid-template-columns: 15.5rem minmax(0, 1fr) 14rem; gap: 2rem; margin-bottom: 1rem; }
+	.article-categories { min-width: 0; }
+	.article-categories__panel { overflow: hidden; border: 1px solid var(--line-divider); border-radius: .7rem; background: var(--card-bg); }
+	.article-categories__all { display: flex; align-items: center; justify-content: space-between; min-height: 3rem; padding: .7rem .9rem; border-bottom: 1px solid var(--line-divider); color: var(--deep-text); font-size: .82rem; font-weight: 850; }
+	.article-categories nav { display: flex; flex-direction: column; padding: .4rem; }
+	.article-categories nav a { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: .45rem; min-height: 2.6rem; padding: .5rem .55rem; border-radius: .45rem; color: var(--deep-text); font-size: .76rem; transition: background-color 180ms ease, color 180ms ease; }
+	.article-categories nav a:hover { background: var(--btn-regular-bg); color: var(--primary); }
+	.article-categories nav span { display: flex; align-items: center; gap: .5rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+	.article-categories nav strong { color: var(--content-meta); font-size: .7rem; }
+	.article-categories nav :global(svg) { width: .95rem; height: .95rem; flex: 0 0 auto; }
+	.article-write { margin-top: 1rem; }
+	.article-write h2 { margin: 0 0 .5rem; padding-left: .7rem; border-left: 1px solid var(--primary); font-size: 1rem; }
+	.article-write a { display: flex; align-items: center; justify-content: center; gap: .4rem; min-height: 2.55rem; border-radius: .45rem; background: var(--deep-text); color: var(--card-bg); font-size: .75rem; font-weight: 800; }
+	.article-list { min-width: 0; }
+	.article-list__header { display: flex; align-items: end; justify-content: space-between; gap: 1rem; min-height: 7.5rem; padding-bottom: 1rem; }
+	.article-list__header span { color: var(--content-meta); font-family: ui-monospace, monospace; font-size: .65rem; font-weight: 750; letter-spacing: .12em; }
+	.article-list__header h1 { margin: .2rem 0 0; color: var(--deep-text); font-size: 2.7rem; line-height: .95; letter-spacing: -.04em; }
+	.article-list__header p { margin: 0; color: var(--content-meta); font-size: .75rem; white-space: nowrap; }
+	.article-list__header p strong { color: var(--deep-text); font-size: 2rem; line-height: 1; }
+	.article-list__items { display: flex; flex-direction: column; gap: .75rem; }
+	.article-row { position: relative; min-height: 9.1rem; overflow: hidden; border: 1px solid color-mix(in oklch, var(--line-divider) 80%, var(--deep-text)); background: var(--card-bg); }
+	.article-row__image { position: absolute; inset: 0 0 0 46%; opacity: .46; }
+	.article-row__image::after { position: absolute; inset: 0; content: ""; background: linear-gradient(90deg, var(--card-bg) 0%, color-mix(in oklch, var(--card-bg) 42%, transparent) 58%, transparent 100%); }
+	.article-row__image :global(.cover-image-container) { width: 100%; height: 100%; min-height: 0; }
+	.article-row__body { position: relative; z-index: 1; display: flex; min-height: 9.1rem; flex-direction: column; justify-content: center; padding: 1.15rem 1.35rem; color: var(--deep-text); }
+	.article-row__body h2 { max-width: 48rem; margin: 0; font-size: 1.08rem; line-height: 1.4; letter-spacing: -.018em; text-wrap: pretty; }
+	.article-row:hover h2 { color: var(--primary); }
+	.article-row__meta { display: flex; flex-wrap: wrap; align-items: center; gap: .45rem .75rem; margin-top: .55rem; color: var(--content-meta); font-size: .68rem; font-weight: 700; }
+	.article-row__meta > span { display: inline-flex; align-items: center; gap: .25rem; }
+	.article-row__meta > span:not(:last-child)::after { margin-left: .55rem; color: color-mix(in oklch, var(--content-meta) 45%, transparent); content: "/"; }
+	.article-row__meta .article-row__category { color: var(--primary); }
+	.article-row__body p { display: -webkit-box; overflow: hidden; max-width: 48rem; margin: .55rem 0 0; color: color-mix(in oklch, var(--deep-text) 70%, var(--content-meta)); font-size: .76rem; line-height: 1.55; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+	.article-toc { padding-top: 1.8rem; }
+	.article-toc h2 { margin: 0; padding-left: .7rem; border-left: 2px solid var(--deep-text); color: var(--deep-text); font-size: 1rem; }
+	.article-toc p { margin: 2.5rem 0 0; color: var(--content-meta); font-size: .75rem; text-align: center; }
+	@media (max-width: 1200px) { .article-index { grid-template-columns: 15.5rem minmax(0, 1fr); } .article-toc { display: none; } }
+	@media (max-width: 900px) { .article-index { grid-template-columns: 1fr; gap: 1rem; } .article-categories { order: 2; } .article-categories__panel { display: none; } .article-write { margin-top: 0; } }
+	@media (max-width: 640px) { .article-list__header { min-height: 6rem; } .article-list__header h1 { font-size: 2.15rem; } .article-list__header p strong { font-size: 1.55rem; } .article-row, .article-row__body { min-height: 10.5rem; } .article-row__image { left: 25%; } .article-row__body { padding: 1rem; } }
 </style>

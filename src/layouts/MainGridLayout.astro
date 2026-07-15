@@ -53,6 +53,7 @@ interface Props {
 	postCategory?: string;
 	headings?: MarkdownHeading[];
 	encrypted?: boolean;
+	contentOnly?: boolean;
 	bannerPostMeta?: {
 		title: string;
 		published: Date;
@@ -74,6 +75,7 @@ const {
 	postCategory,
 	headings = [],
 	encrypted = false,
+	contentOnly = false,
 	bannerPostMeta,
 } = Astro.props;
 
@@ -190,15 +192,18 @@ const shouldAddLeftSidebar: boolean =
 	shouldShowBothSidebarsOnPostPage && sidebarLayoutConfig.position === "right";
 
 const effectiveIsBothSidebars: boolean =
-	sidebarConfig.isBothSidebars || shouldShowBothSidebarsOnPostPage;
+	!contentOnly &&
+	(sidebarConfig.isBothSidebars || shouldShowBothSidebarsOnPostPage);
 const effectiveHasRightComponents: boolean =
-	sidebarConfig.hasRightComponents ||
-	(shouldAddRightSidebar &&
-		sidebarLayoutConfig.rightComponents.some((comp) => comp.enable));
+	!contentOnly &&
+	(sidebarConfig.hasRightComponents ||
+		(shouldAddRightSidebar &&
+			sidebarLayoutConfig.rightComponents.some((comp) => comp.enable)));
 const effectiveHasLeftComponents: boolean =
-	sidebarConfig.hasLeftComponents ||
-	(shouldAddLeftSidebar &&
-		sidebarLayoutConfig.leftComponents.some((comp) => comp.enable));
+	!contentOnly &&
+	(sidebarConfig.hasLeftComponents ||
+		(shouldAddLeftSidebar &&
+			sidebarLayoutConfig.leftComponents.some((comp) => comp.enable)));
 
 // 使用effective值重新生成网格类
 // 当position为right且文章页临时显示左侧栏时，tabletSidebar应为right（保持显示主侧栏）
@@ -212,6 +217,9 @@ const updatedGridConfig: ResponsiveSidebarConfig = {
 	hasLeftComponents: effectiveHasLeftComponents,
 	hasRightComponents: effectiveHasRightComponents,
 	tabletSidebar: effectiveTabletSidebar,
+	mobileShowSidebar: contentOnly ? false : sidebarConfig.mobileShowSidebar,
+	tabletShowSidebar: contentOnly ? false : sidebarConfig.tabletShowSidebar,
+	desktopShowSidebar: contentOnly ? false : sidebarConfig.desktopShowSidebar,
 };
 
 const { gridCols } = generateGridClasses(updatedGridConfig);
@@ -819,7 +827,12 @@ const hasMultipleImages =
                 如果全局配置为仅右侧栏(position: right)，则使用动态容器(被swup替换)，以便在文章页显示左侧栏。
                 注意：为了满足swup要求所有containers必须存在，我们在所有模式下都必须渲染 #left-sidebar-dynamic。
             */}
-            {sidebarLayoutConfig.position !== "right" ? (
+            {contentOnly ? (
+				<>
+					<div id="left-sidebar-wrapper" class="hidden"></div>
+					<div id="left-sidebar-dynamic" class="hidden transition-swup-fade"></div>
+				</>
+			) : sidebarLayoutConfig.position !== "right" ? (
                 <>
                     {sidebarLayoutConfig.enable ? (
                         <div id="left-sidebar-wrapper" class="contents" data-hide-sidebar-on-post={hideSidebarOnPostPage ? "true" : "false"} style="contain: layout style paint;">
@@ -872,7 +885,12 @@ const hasMultipleImages =
                 注意：为了满足swup要求所有containers必须存在，我们在所有模式下都必须渲染 #right-sidebar-dynamic。
                 右侧边栏的显示由CSS类控制。
             */}
-            {(sidebarLayoutConfig.position === "both" || sidebarLayoutConfig.position === "right") ? (
+            {contentOnly ? (
+				<>
+					<div id="right-sidebar-static" class="hidden"></div>
+					<div id="right-sidebar-dynamic" class="hidden transition-swup-fade"></div>
+				</>
+			) : (sidebarLayoutConfig.position === "both" || sidebarLayoutConfig.position === "right") ? (
                 <>
                     {sidebarLayoutConfig.enable ? (
                         <div id="right-sidebar-static" class="contents" data-hide-sidebar-on-post={hideSidebarOnPostPage ? "true" : "false"}>
@@ -894,7 +912,7 @@ const hasMultipleImages =
             )}
 
             {/* 移动端底部组件 - 768px及以下显示 */}
-            {sidebarLayoutConfig.mobileBottomComponents && sidebarLayoutConfig.mobileBottomComponents.length > 0 && (
+            {!contentOnly && sidebarLayoutConfig.mobileBottomComponents && sidebarLayoutConfig.mobileBottomComponents.length > 0 && (
                 <div id="mobile-bottom-sidebar" class="col-span-1 block md:hidden mt-4">
 					<SideBar side="bottom" headings={headings} encrypted={encrypted}></SideBar>
                 </div>

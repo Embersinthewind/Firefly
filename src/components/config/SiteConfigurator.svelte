@@ -1,5 +1,10 @@
 <script lang="ts">
 import { onMount } from "svelte";
+import {
+	defaultKVaultWriterSettings,
+	type KVaultWriterSettings,
+	writerStorageKeys,
+} from "@/config/writerConfig";
 import type {
 	PortfolioData,
 	SiteEditorGitHubConfig,
@@ -13,6 +18,7 @@ type Tab =
 	| "profile"
 	| "appearance"
 	| "sidebar"
+	| "writing"
 	| "announcement";
 type FileKey = "site" | "profile" | "portfolio";
 type StatusTone = "info" | "success" | "error";
@@ -36,6 +42,9 @@ const draftStorageKey = "firefly:config:draft";
 let site = $state(clone(initialSite));
 let profile = $state(clone(initialProfile));
 let portfolio = $state(clone(initialPortfolio));
+let writerSettings = $state<KVaultWriterSettings>(
+	clone(defaultKVaultWriterSettings),
+);
 let baseline = $state({
 	site: clone(initialSite),
 	profile: clone(initialProfile),
@@ -63,6 +72,7 @@ const tabs: { id: Tab; label: string; icon: string }[] = [
 	{ id: "profile", label: "用户资料", icon: "●" },
 	{ id: "appearance", label: "背景壁纸", icon: "▧" },
 	{ id: "sidebar", label: "侧边栏", icon: "▤" },
+	{ id: "writing", label: "写作设置", icon: "✎" },
 	{ id: "announcement", label: "公告", icon: "◖" },
 ];
 
@@ -331,7 +341,35 @@ function removeProjectMeta(index: number) {
 	portfolio.github.projectMeta.splice(index, 1);
 }
 
+function saveWriterSettings() {
+	localStorage.setItem(
+		writerStorageKeys.kvault,
+		JSON.stringify(writerSettings),
+	);
+	setStatus(
+		"K-Vault 写作配置已保存到当前浏览器，不会提交到 GitHub。",
+		"success",
+	);
+}
+
+function clearWriterToken() {
+	writerSettings.token = "";
+	saveWriterSettings();
+	setStatus("本机保存的 K-Vault Token 已清除。", "success");
+}
+
 onMount(() => {
+	const storedWriterSettings = localStorage.getItem(writerStorageKeys.kvault);
+	if (storedWriterSettings) {
+		try {
+			writerSettings = {
+				...clone(defaultKVaultWriterSettings),
+				...(JSON.parse(storedWriterSettings) as Partial<KVaultWriterSettings>),
+			};
+		} catch {
+			localStorage.removeItem(writerStorageKeys.kvault);
+		}
+	}
 	const stored = sessionStorage.getItem(tokenStorageKey);
 	if (stored) {
 		tokenInput = stored;
@@ -390,8 +428,26 @@ onMount(() => {
 	</nav>
 
 	<form onsubmit={(event) => event.preventDefault()}>
-		<fieldset disabled={!authorized || busy}>
-			{#if activeTab === "site"}
+		<fieldset disabled={(activeTab !== "writing" && !authorized) || busy}>
+			{#if activeTab === "writing"}
+				<div class="config-section">
+					<header>
+						<div><h2>K-Vault 图片自动上传</h2><p>保存一次后，写文章时粘贴、拖入或选择图片会直接上传到指定存储源。</p></div>
+						<div class="section-actions">
+							<button type="button" class="button-secondary" onclick={clearWriterToken}>清除 Token</button>
+							<button type="button" class="button-primary" onclick={saveWriterSettings}>保存到本机</button>
+						</div>
+					</header>
+					<label>K-Vault 地址<input type="url" bind:value={writerSettings.baseUrl} placeholder="https://img.example.com" /></label>
+					<label>API Token<input type="password" bind:value={writerSettings.token} placeholder="仅保存在当前浏览器" autocomplete="off" /></label>
+					<div class="form-grid three">
+						<label>存储源<input bind:value={writerSettings.storage} placeholder="telegram" /></label>
+						<label>上传目录<input bind:value={writerSettings.folderPath} placeholder="blog" /></label>
+						<label>返回链接<select bind:value={writerSettings.linkMode}><option value="download">图片直链</option><option value="share">分享链接</option></select></label>
+					</div>
+					<p class="local-secret-note">地址与 Token 只写入当前浏览器的本地存储，不参与“提交配置”，也不会出现在 GitHub 仓库中。</p>
+				</div>
+			{:else if activeTab === "site"}
 				<div class="config-section">
 					<header><h2>基础信息</h2><p>站点标题、地址、描述和搜索关键词。</p></header>
 					<div class="form-grid two">
@@ -557,6 +613,8 @@ onMount(() => {
 	.config-section > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding-bottom: 1rem; margin-bottom: 1rem; border-bottom: 1px solid var(--line-divider); }
 	.config-section h2 { margin: 0; font-size: 1rem; }
 	.config-section header p { margin: .25rem 0 0; color: var(--content-meta); font-size: .75rem; line-height: 1.5; }
+	.section-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+	.local-secret-note { margin: 1rem 0 0; padding: .75rem; border-radius: .55rem; background: var(--btn-regular-bg); color: var(--content-meta); font-size: .72rem; line-height: 1.55; }
 	.config-section label { display: grid; gap: .45rem; margin-top: .9rem; color: var(--content-meta); font-size: .75rem; font-weight: 750; }
 	.config-section header + label, .config-section header + .form-grid, .config-section header + .toggle-grid { margin-top: 0; }
 	input, textarea, select { width: 100%; min-height: 2.55rem; padding: .55rem .7rem; border: 1px solid color-mix(in oklch, var(--line-divider) 80%, var(--deep-text)); border-radius: .5rem; background: var(--card-bg); color: var(--deep-text); font: inherit; }

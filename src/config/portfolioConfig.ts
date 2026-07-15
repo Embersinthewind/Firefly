@@ -76,6 +76,7 @@ export const siteEditorGitHubConfig: SiteEditorGitHubConfig = {
 	owner: "Embersinthewind",
 	repo: "Firefly",
 	branch: "main",
+	postsDir: "src/content/posts",
 	paths: {
 		site: "src/data/site.json",
 		profile: "src/data/profile.json",

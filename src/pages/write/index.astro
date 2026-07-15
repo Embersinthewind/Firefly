@@ -1,5 +1,6 @@
 ---
 import ArticleWriter from "@/components/articles/ArticleWriter.svelte";
+import { siteEditorGitHubConfig } from "@/config/portfolioConfig";
 import MainGridLayout from "@/layouts/MainGridLayout.astro";
 import { getCategoryList } from "@/utils/content-utils";
 
@@ -7,5 +8,5 @@ const categories = (await getCategoryList()).map((category) => category.name);
 ---
 
 <MainGridLayout title="写文章" description="专注 Markdown 写作，支持导入导出与 K-Vault 图片自动上传">
-	<ArticleWriter categories={categories} client:load />
+	<ArticleWriter categories={categories} repository={siteEditorGitHubConfig} client:load />
 </MainGridLayout>

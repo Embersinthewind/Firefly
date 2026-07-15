@@ -96,5 +96,6 @@ export type SiteEditorGitHubConfig = {
 	owner: string;
 	repo: string;
 	branch: string;
+	postsDir: string;
 	paths: { site: string; profile: string; portfolio: string };
 };

@@ -33,7 +33,7 @@ const getDynamicNavBarConfig = (): NavBarConfig => {
 		name: "记录",
 		url: "#",
 		icon: "material-symbols:history-edu-rounded",
-		children: [LinkPresets.Bangumi, LinkPresets.Anime],
+		children: [LinkPresets.Bangumi, LinkPresets.Anime, LinkPresets.Music],
 	});
 
 	links.push({
@@ -137,6 +137,11 @@ export const LinkPresets: Record<string, NavBarLink> = {
 		url: "/anime/",
 		icon: "material-symbols:live-tv",
 		pageKey: "anime",
+	},
+	Music: {
+		name: "音乐",
+		url: "/music/",
+		icon: "material-symbols:music-note-rounded",
 	},
 	Config: {
 		name: "站点配置",
