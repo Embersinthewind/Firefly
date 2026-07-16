@@ -514,16 +514,20 @@ async function publishArticle() {
 		<div class="cover-control">
 			<span>封面图片</span>
 			{#if coverPreview || cover}
-				<div class="cover-preview" class:is-success={coverUploadState === "success"} class:is-error={coverUploadState === "error"} aria-live="polite">
-					<img src={coverPreview || cover} alt="文章封面预览" />
-					<span class="cover-preview__text">
-						<strong>{coverUploadState === "uploading" ? "正在上传…" : coverUploadState === "success" ? "✓ 已上传" : coverUploadState === "error" ? "上传失败" : "封面预览"}</strong>
-						<small title={coverFileName}>{coverFileName || "远程封面"}</small>
-					</span>
+				<div class="cover-preview-wrap">
+					<label class="cover-preview" class:is-success={coverUploadState === "success"} class:is-error={coverUploadState === "error"} aria-live="polite" title="单击更换封面">
+						<input type="file" accept="image/*" onchange={handleCoverInput} disabled={isUploading} />
+						<img src={coverPreview || cover} alt="文章封面预览" />
+						<span class="cover-preview__text">
+							<strong>{coverUploadState === "uploading" ? "正在上传…" : coverUploadState === "success" ? "✓ 已上传" : coverUploadState === "error" ? "上传失败" : "封面预览"}</strong>
+							<small title={coverFileName}>{coverFileName || "远程封面"}</small>
+						</span>
+					</label>
+					<button type="button" class="cover-remove" onclick={clearCover} aria-label="移除封面" title="移除封面">×</button>
 				</div>
+			{:else}
+				<label class="cover-upload"><input type="file" accept="image/*" onchange={handleCoverInput} disabled={isUploading} /><span>上传封面</span></label>
 			{/if}
-			<label class="cover-upload"><input type="file" accept="image/*" onchange={handleCoverInput} disabled={isUploading} /><span>{cover ? "更换封面" : "上传封面"}</span></label>
-			{#if coverPreview || cover}<button type="button" class="icon-button" onclick={clearCover} aria-label="移除封面">×</button>{/if}
 		</div>
 		<div class="publish-flags">
 			<label><input type="checkbox" bind:checked={draft} /><span>草稿</span></label>
@@ -569,7 +573,7 @@ async function publishArticle() {
 	button.primary { border-color: var(--primary); background: var(--primary); color: oklch(.18 .02 var(--hue)); }
 	button:disabled { cursor: wait; opacity: .58; }
 	.github-state { color: var(--primary); }
-	.file-action input, .toolbar-upload input, .cover-upload input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+	.file-action input, .toolbar-upload input, .cover-upload input, .cover-preview input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
 	.github-auth { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .5rem; padding: .75rem .85rem; border-bottom: 1px solid var(--line-divider); background: color-mix(in oklch, var(--primary) 7%, var(--card-bg)); }
 	.github-auth input { min-width: 0; }
 	.title-input { width: 100%; min-height: 5rem; padding: 1rem 1.25rem; border: 0; border-bottom: 1px solid var(--line-divider); background: transparent; color: var(--deep-text); font-size: 2.15rem; font-weight: 850; letter-spacing: -.035em; outline: none; }
@@ -580,7 +584,9 @@ async function publishArticle() {
 	.meta-grid input::placeholder, .github-auth input::placeholder, .markdown-editor::placeholder { color: color-mix(in oklch, var(--content-meta) 55%, transparent); opacity: 1; }
 	.cover-control { display: flex; align-items: center; gap: .45rem; min-width: 0; grid-column: span 2; }
 	.cover-control > span:first-child { color: var(--content-meta); font-size: .68rem; font-weight: 800; white-space: nowrap; }
-	.cover-preview { display: flex; align-items: center; gap: .5rem; min-width: 0; padding: .25rem .55rem .25rem .25rem; border: 1px solid var(--line-divider); border-radius: .5rem; background: var(--card-bg); }
+	.cover-preview-wrap { position: relative; min-width: 0; }
+	.cover-preview { display: flex; align-items: center; gap: .5rem; min-width: 0; padding: .25rem .55rem .25rem .25rem; border: 1px solid var(--line-divider); border-radius: .5rem; background: var(--card-bg); cursor: pointer; transition: border-color 180ms ease, background-color 180ms ease; }
+	.cover-preview:hover { border-color: var(--primary); background: color-mix(in oklch, var(--primary) 5%, var(--card-bg)); }
 	.cover-preview.is-success { border-color: color-mix(in oklch, #15803d 55%, var(--line-divider)); }
 	.cover-preview.is-error { border-color: color-mix(in oklch, #dc2626 55%, var(--line-divider)); }
 	.cover-preview img { width: 3rem; height: 3rem; flex: 0 0 auto; object-fit: cover; border-radius: .35rem; }
@@ -589,8 +595,9 @@ async function publishArticle() {
 	.cover-preview.is-success .cover-preview__text strong { color: color-mix(in oklch, #15803d 78%, var(--deep-text)); }
 	.cover-preview.is-error .cover-preview__text strong { color: #dc2626; }
 	.cover-preview__text small { max-width: 8rem; overflow: hidden; color: var(--content-meta); font-size: .62rem; text-overflow: ellipsis; white-space: nowrap; }
+	.cover-remove { position: absolute; top: -.4rem; right: -.4rem; width: 1.35rem; min-height: 1.35rem; padding: 0; border-color: color-mix(in oklch, #dc2626 45%, var(--line-divider)); border-radius: 999px; background: var(--card-bg); color: #dc2626; font-size: .8rem; line-height: 1; opacity: 0; transform: scale(.82); transition: opacity 160ms ease, transform 160ms ease; }
+	.cover-preview-wrap:hover .cover-remove, .cover-preview-wrap:focus-within .cover-remove { opacity: 1; transform: scale(1); }
 	.cover-upload > span { min-height: 2.35rem; white-space: nowrap; }
-	.icon-button { width: 2.1rem; min-height: 2.1rem; padding: 0; }
 	.publish-flags { display: flex; align-items: center; gap: .65rem; }
 	.publish-flags label { display: flex; align-items: center; gap: .3rem; color: var(--deep-text); font-size: .72rem; font-weight: 750; }
 	.publish-flags input { width: 1rem; min-height: 1rem; accent-color: var(--primary); }
@@ -610,5 +617,7 @@ async function publishArticle() {
 	.status-error { color: #dc2626; }
 	input:focus-visible, textarea:focus-visible, button:focus-visible, .file-action:focus-within span, .cover-upload:focus-within span, .toolbar-upload:focus-within { outline: 2px solid var(--primary); outline-offset: 2px; }
 	@media (max-width: 1100px) { .meta-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+	@media (hover: none) { .cover-remove { opacity: 1; transform: scale(1); } }
+	@media (prefers-reduced-motion: reduce) { .cover-preview, .cover-remove { transition: none; } }
 	@media (max-width: 640px) { .writer-actions { align-items: stretch; flex-direction: column; } .writer-actions__group > * { flex: 1; } .github-auth { grid-template-columns: 1fr; } .title-input { font-size: 1.65rem; } .meta-grid { grid-template-columns: 1fr 1fr; } .meta-wide { grid-column: span 2; } .cover-control, .publish-flags { grid-column: span 2; } .markdown-editor, .markdown-preview { min-height: 34rem; padding-inline: 1rem; } }
 </style>
