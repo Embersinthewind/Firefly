@@ -97,7 +97,7 @@ const filteredCategories = $derived.by(() => {
 const isOwner = $derived(Boolean(accessToken && githubUser));
 
 onMount(() => {
-	const storedToken = sessionStorage.getItem(tokenStorageKey);
+	const storedToken = localStorage.getItem(tokenStorageKey);
 	if (storedToken) {
 		tokenInput = storedToken;
 		void connectGitHub(true);
@@ -212,13 +212,13 @@ async function connectGitHub(silent = false): Promise<void> {
 		tokenInput = "";
 		isDirty = false;
 		authPanelOpen = false;
-		sessionStorage.setItem(tokenStorageKey, token);
+		localStorage.setItem(tokenStorageKey, token);
 		setStatus(`已绑定 GitHub：${user.login}，编辑功能已解锁`, "success");
 	} catch (error) {
 		accessToken = "";
 		githubUser = null;
 		repositorySha = "";
-		sessionStorage.removeItem(tokenStorageKey);
+		localStorage.removeItem(tokenStorageKey);
 		setStatus(
 			error instanceof Error ? error.message : "GitHub 绑定失败",
 			"error",
@@ -236,7 +236,7 @@ function disconnectGitHub(): void {
 	isDirty = false;
 	editorOpen = false;
 	categoryEditorOpen = false;
-	sessionStorage.removeItem(tokenStorageKey);
+	localStorage.removeItem(tokenStorageKey);
 	setStatus("已退出编辑，当前页面恢复为游客只读模式");
 }
 
@@ -517,7 +517,7 @@ function favicon(item: NavigationItem): string {
 		<form class="auth-panel" onsubmit={(event) => { event.preventDefault(); void connectGitHub(); }}>
 			<div>
 				<strong>绑定 GitHub Token</strong>
-				<p>Token 需要此仓库的 Contents 读写权限，仅保存在当前浏览器会话中。</p>
+				<p>Token 需要此仓库的 Contents 读写权限，并保存在当前设备的浏览器中。</p>
 			</div>
 			<label>
 				<span class="sr-only">GitHub Token</span>

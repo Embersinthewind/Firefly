@@ -39,6 +39,52 @@ const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 const tokenStorageKey = "firefly:config:github-token";
 const draftStorageKey = "firefly:config:draft";
 
+function formatRepositoryJson(value: unknown): string {
+	const displayWidth = (text: string) =>
+		Array.from(text).reduce((width, character) => {
+			const codePoint = character.codePointAt(0) ?? 0;
+			return width + (codePoint > 127 ? 2 : 1);
+		}, 0);
+	const formatValue = (
+		current: unknown,
+		level: number,
+		linePrefixWidth = level,
+	): string => {
+		if (Array.isArray(current)) {
+			if (current.length === 0) return "[]";
+			const isPrimitiveArray = current.every(
+				(item) => item === null || typeof item !== "object",
+			);
+			const compact = isPrimitiveArray
+				? `[${current.map((item) => JSON.stringify(item)).join(", ")}]`
+				: JSON.stringify(current);
+			if (isPrimitiveArray && linePrefixWidth + displayWidth(compact) <= 80) {
+				return compact;
+			}
+			const indent = "\t".repeat(level);
+			const childIndent = "\t".repeat(level + 1);
+			return `[\n${current
+				.map((item) => `${childIndent}${formatValue(item, level + 1)}`)
+				.join(",\n")}\n${indent}]`;
+		}
+		if (current && typeof current === "object") {
+			const entries = Object.entries(current as Record<string, unknown>);
+			if (entries.length === 0) return "{}";
+			const indent = "\t".repeat(level);
+			const childIndent = "\t".repeat(level + 1);
+			return `{\n${entries
+				.map(([key, item]) => {
+					const prefix = `${childIndent}${JSON.stringify(key)}: `;
+					return `${prefix}${formatValue(item, level + 1, prefix.length)}`;
+				})
+				.join(",\n")}\n${indent}}`;
+		}
+		return JSON.stringify(current);
+	};
+
+	return `${formatValue(value, 0)}\n`;
+}
+
 let site = $state(clone(initialSite));
 let profile = $state(clone(initialProfile));
 let portfolio = $state(clone(initialPortfolio));
@@ -164,12 +210,12 @@ async function connectGitHub() {
 		authorized = true;
 		githubUser = user.login;
 		authOpen = false;
-		sessionStorage.setItem(tokenStorageKey, token);
+		localStorage.setItem(tokenStorageKey, token);
 		setStatus(`已绑定 GitHub：${user.login}，配置编辑已解锁。`, "success");
 	} catch (error) {
 		authorized = false;
 		githubUser = "";
-		sessionStorage.removeItem(tokenStorageKey);
+		localStorage.removeItem(tokenStorageKey);
 		setStatus(
 			error instanceof Error ? error.message : "GitHub 绑定失败。",
 			"error",
@@ -183,7 +229,7 @@ function disconnect() {
 	authorized = false;
 	githubUser = "";
 	tokenInput = "";
-	sessionStorage.removeItem(tokenStorageKey);
+	localStorage.removeItem(tokenStorageKey);
 	resetChanges();
 	setStatus("已退出编辑，页面恢复为游客只读模式。");
 }
@@ -239,7 +285,7 @@ async function writeRepositoryFile(
 			headers: { ...apiHeaders(token), "Content-Type": "application/json" },
 			body: JSON.stringify({
 				message: `feat: update ${key} configuration`,
-				content: encodeBase64(`${JSON.stringify(value, null, "\t")}\n`),
+				content: encodeBase64(formatRepositoryJson(value)),
 				sha: shas[key],
 				branch: repository.branch,
 			}),
@@ -274,7 +320,7 @@ async function submitConfiguration() {
 		return;
 	}
 
-	const token = sessionStorage.getItem(tokenStorageKey) || tokenInput.trim();
+	const token = localStorage.getItem(tokenStorageKey) || tokenInput.trim();
 	if (!token) return;
 	busy = true;
 	setStatus("正在把配置提交到 GitHub……");
@@ -370,7 +416,7 @@ onMount(() => {
 			localStorage.removeItem(writerStorageKeys.kvault);
 		}
 	}
-	const stored = sessionStorage.getItem(tokenStorageKey);
+	const stored = localStorage.getItem(tokenStorageKey);
 	if (stored) {
 		tokenInput = stored;
 		connectGitHub();
@@ -406,7 +452,7 @@ onMount(() => {
 		<div class="auth-panel">
 			<div>
 				<strong>GitHub 仓库授权</strong>
-				<p>Token 只保存在当前浏览器会话中，需要目标仓库 Contents 读写权限。</p>
+				<p>Token 通过 HTTPS 验证并保存在当前设备的浏览器中，主动退出时会清除。</p>
 			</div>
 			<input type="password" bind:value={tokenInput} placeholder="github_pat_…" autocomplete="off" />
 			<button type="button" class="button-primary" onclick={connectGitHub} disabled={busy}>

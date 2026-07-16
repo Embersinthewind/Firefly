@@ -19,7 +19,6 @@ type UploadResponse = {
 
 type ImportedFrontmatter = {
 	title?: unknown;
-	slug?: unknown;
 	published?: unknown;
 	draft?: unknown;
 	pinned?: unknown;
@@ -27,12 +26,10 @@ type ImportedFrontmatter = {
 	image?: unknown;
 	tags?: unknown;
 	category?: unknown;
-	views?: unknown;
 };
 
 type ArticleDraft = {
 	title: string;
-	slug: string;
 	published: string;
 	category: string;
 	tags: string;
@@ -40,7 +37,6 @@ type ArticleDraft = {
 	cover: string;
 	draft: boolean;
 	pinned: boolean;
-	views: number;
 	content: string;
 };
 
@@ -54,7 +50,6 @@ const {
 
 const today = new Date().toISOString().slice(0, 10);
 let title = $state("");
-let slug = $state("");
 let published = $state(today);
 let category = $state(categories[0] || "");
 let tags = $state("");
@@ -62,7 +57,6 @@ let description = $state("");
 let cover = $state("");
 let draft = $state(false);
 let pinned = $state(false);
-let views = $state(0);
 let content = $state("");
 let editorMode = $state<"write" | "preview">("write");
 let settings = $state<KVaultWriterSettings>({
@@ -87,19 +81,16 @@ const normalizedTags = $derived(
 );
 
 const safeSlug = $derived(
-	slug.trim() ||
-		title
-			.trim()
-			.toLowerCase()
-			.replace(/\s+/g, "-")
-			.replace(/[^\p{L}\p{N}_-]/gu, "") ||
-		"new-post",
+	title
+		.trim()
+		.toLowerCase()
+		.replace(/\s+/g, "-")
+		.replace(/[^\p{L}\p{N}_-]/gu, "") || "new-post",
 );
 
 const frontmatter = $derived(
 	YAML.stringify({
 		title: title.trim() || "未命名文章",
-		slug: safeSlug,
 		published: published || today,
 		draft,
 		pinned,
@@ -107,21 +98,11 @@ const frontmatter = $derived(
 		image: cover.trim(),
 		tags: normalizedTags,
 		category: category.trim(),
-		views: Math.max(0, Number(views) || 0),
 	}),
 );
 
 const markdown = $derived(`---\n${frontmatter}---\n\n${content.trim()}\n`);
 const fileName = $derived(`${safeSlug}.md`);
-
-$effect(() => {
-	if (typeof window === "undefined") return;
-	const value = Math.max(0, Number(views) || 0);
-	localStorage.setItem("firefly:article-writer:views", String(value));
-	window.dispatchEvent(
-		new CustomEvent("firefly:article-writer:views", { detail: value }),
-	);
-});
 
 $effect(() => {
 	Promise.resolve(marked.parse(content || "", { async: false })).then(
@@ -144,7 +125,7 @@ onMount(() => {
 		}
 	}
 
-	const storedToken = sessionStorage.getItem(writerStorageKeys.githubToken);
+	const storedToken = localStorage.getItem(writerStorageKeys.githubToken);
 	if (storedToken) {
 		githubTokenInput = storedToken;
 		void connectGitHub(true);
@@ -279,7 +260,10 @@ async function handlePaste(event: ClipboardEvent) {
 	const item = Array.from(event.clipboardData?.items || []).find((entry) =>
 		entry.type.startsWith("image/"),
 	);
-	const file = item?.getAsFile();
+	const clipboardFile = Array.from(event.clipboardData?.files || []).find(
+		(entry) => entry.type.startsWith("image/"),
+	);
+	const file = item?.getAsFile() || clipboardFile;
 	if (!file) return;
 	event.preventDefault();
 	await uploadAsset(file, "body");
@@ -310,7 +294,6 @@ function stringValue(value: unknown) {
 
 function applyDraft(article: Partial<ArticleDraft>) {
 	title = article.title ?? "";
-	slug = article.slug ?? "";
 	published = article.published ?? today;
 	category = article.category ?? categories[0] ?? "";
 	tags = article.tags ?? "";
@@ -318,14 +301,12 @@ function applyDraft(article: Partial<ArticleDraft>) {
 	cover = article.cover ?? "";
 	draft = article.draft ?? false;
 	pinned = article.pinned ?? false;
-	views = Math.max(0, Number(article.views) || 0);
 	content = article.content ?? "";
 }
 
 function currentDraft(): ArticleDraft {
 	return {
 		title,
-		slug,
 		published,
 		category,
 		tags,
@@ -333,7 +314,6 @@ function currentDraft(): ArticleDraft {
 		cover,
 		draft,
 		pinned,
-		views,
 		content,
 	};
 }
@@ -372,14 +352,12 @@ async function importMarkdown(event: Event) {
 			: stringValue(data.tags).split(/[,，#＃]+/);
 		applyDraft({
 			title: stringValue(data.title),
-			slug: stringValue(data.slug) || file.name.replace(/\.mdx?$/i, ""),
 			published: dateValue(data.published),
 			draft: data.draft === true,
 			pinned: data.pinned === true,
 			description: stringValue(data.description),
 			cover: stringValue(data.image),
 			category: stringValue(data.category),
-			views: Math.max(0, Number(data.views) || 0),
 			tags: importedTags
 				.map((tag) => tag.trim())
 				.filter(Boolean)
@@ -460,12 +438,12 @@ async function connectGitHub(silent = false) {
 		githubUser = user.login;
 		githubAuthorized = true;
 		authOpen = false;
-		sessionStorage.setItem(writerStorageKeys.githubToken, token);
+		localStorage.setItem(writerStorageKeys.githubToken, token);
 		setStatus(`已绑定 GitHub：${user.login}。`, "success");
 	} catch (error) {
 		githubUser = "";
 		githubAuthorized = false;
-		sessionStorage.removeItem(writerStorageKeys.githubToken);
+		localStorage.removeItem(writerStorageKeys.githubToken);
 		setStatus(
 			error instanceof Error ? error.message : "GitHub 绑定失败。",
 			"error",
@@ -477,7 +455,7 @@ function disconnectGitHub() {
 	githubUser = "";
 	githubAuthorized = false;
 	githubTokenInput = "";
-	sessionStorage.removeItem(writerStorageKeys.githubToken);
+	localStorage.removeItem(writerStorageKeys.githubToken);
 	setStatus("已退出 GitHub 发布模式。");
 }
 
@@ -492,7 +470,7 @@ async function publishArticle() {
 		return;
 	}
 	const token =
-		sessionStorage.getItem(writerStorageKeys.githubToken) ||
+		localStorage.getItem(writerStorageKeys.githubToken) ||
 		githubTokenInput.trim();
 	if (!token) return;
 	isPublishing = true;
@@ -569,7 +547,7 @@ async function publishArticle() {
 
 	{#if authOpen && !githubAuthorized}
 		<div class="github-auth">
-			<input type="password" bind:value={githubTokenInput} placeholder="GitHub Token，仅保留在当前浏览器会话" autocomplete="off" />
+			<input type="password" bind:value={githubTokenInput} placeholder="GitHub Token，将保存在当前设备浏览器" autocomplete="off" />
 			<button type="button" class="primary" onclick={() => connectGitHub(false)}>验证并绑定</button>
 		</div>
 	{/if}
@@ -577,13 +555,11 @@ async function publishArticle() {
 	<input class="title-input" bind:value={title} placeholder="输入文章标题…" aria-label="文章标题" />
 
 	<div class="meta-grid" aria-label="文章设置">
-		<label>文章 Slug<input bind:value={slug} placeholder={safeSlug} /></label>
 		<label class="meta-wide">文章摘要<input bind:value={description} placeholder="用于文章列表与 SEO 的简短摘要" /></label>
 		<label>标签<input bind:value={tags} placeholder="使用 # 分隔，例如 #技术 #Astro" /></label>
 		<label>分类<input bind:value={category} list="writer-category-list" placeholder="选择或输入分类" /></label>
 		<datalist id="writer-category-list">{#each categories as item}<option value={item}></option>{/each}</datalist>
 		<label>发布日期<input type="date" bind:value={published} /></label>
-		<label>文章浏览量<input type="number" min="0" step="1" bind:value={views} placeholder="0" /></label>
 		<div class="cover-control">
 			<span>封面图片</span>
 			{#if cover}<img src={cover} alt="文章封面预览" />{/if}
