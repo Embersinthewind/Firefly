@@ -35,6 +35,12 @@
 [**📝使用文档**](https://docs-firefly.cuteleaf.cn/) /
 [**🍀我的博客**](https://blog.cuteleaf.cn) 
 
+> [!IMPORTANT]
+>
+> 当前仓库 `Embersinthewind/Firefly` 是基于 [CuteLeaf/Firefly](https://github.com/CuteLeaf/Firefly) 的个人定制分支，并非上游官方发行版。上方预览和使用文档属于上游项目；本仓库的线上站点为 [yiyu.asia](https://yiyu.asia/)。
+>
+> 本分支增加了项目型主页、网站导航、可视化站点配置、文章写作与 GitHub 发布、Cloudflare 作者代理、K-Vault 图床、沉浸式音乐页等功能。部署、密钥和写作流程请阅读 **[定制版部署与使用指南](./docs/custom-deployment.md)**，变更概览见 **[定制功能记录](./docs/custom-changelog.md)**。
+
 ⚡ 静态站点生成: 基于 Astro 的超快加载速度和 SEO 优化
 
 🎨 现代化设计: 简洁美观的界面，支持自定义主题色
@@ -100,6 +106,8 @@
 
 ## 🚀 快速开始
 
+> 本节保留上游 Firefly 的通用使用方法。部署当前定制分支时，请优先阅读 [定制版部署与使用指南](./docs/custom-deployment.md)。
+
 ### 环境要求
 
 - Node.js ≥ 22
@@ -109,7 +117,7 @@
 
 1. **克隆仓库：**
    ```bash
-   git clone https://github.com/Cuteleaf/Firefly.git
+   git clone https://github.com/Embersinthewind/Firefly.git
    cd Firefly
    ```
    
@@ -249,6 +257,15 @@ comment: true    # 是否允许评论
 | `pnpm astro --help`        | 显示 Astro CLI 帮助                    |
 
 ## 🙏 致谢
+
+本定制分支继续遵循上游 Firefly 的 MIT 许可与署名要求，并使用或参考了以下项目：
+
+- [CuteLeaf/Firefly](https://github.com/CuteLeaf/Firefly)：本仓库的上游博客主题
+- [saicaca/fuwari](https://github.com/saicaca/fuwari)：Firefly 的基础模板
+- [Embersinthewind/K-Vault](https://github.com/Embersinthewind/K-Vault)：写作页面的图片存储与直链服务
+- [fqzlr.com](https://www.fqzlr.com/)：部分页面布局与交互的视觉参考
+
+K-Vault 是独立部署的服务，不会随本仓库自动安装；其访问令牌也不应写入 Git 或 README。详细连接方式见 [K-Vault 写作配置](./docs/custom-deployment.md#k-vault-图片服务)。
 
 非常感谢 [saicaca](https://github.com/saicaca) 开发的 [fuwari](https://github.com/saicaca/fuwari) 模板，Firefly 就是基于这个模板二次开发
 

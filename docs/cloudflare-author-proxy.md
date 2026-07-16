@@ -2,6 +2,8 @@
 
 Firefly 的写文章、站点配置和网站导航编辑通过同域 `/api/author/*` 接口提交到 GitHub。GitHub Token 只保存在 Cloudflare Secret 中，不会进入浏览器或仓库。
 
+完整部署、GitHub 权限和 K-Vault 写作配置见 [定制版部署与使用指南](./custom-deployment.md)。
+
 ## 添加三个 Secret
 
 在 Cloudflare Dashboard 打开 `Workers & Pages → firefly → Settings → Variables and Secrets → Add`，依次添加：

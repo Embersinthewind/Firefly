@@ -1,5 +1,9 @@
 # Firefly 浏览器内容后台
 
+> [!NOTE]
+>
+> 本文记录项目早期接入的 Sveltia CMS `/admin/` 方案。当前定制分支主要使用 `/write/`、`/config/`、`/navigation/` 与 Cloudflare 作者代理；新部署请优先阅读 [定制版部署与使用指南](./custom-deployment.md) 和 [Cloudflare 作者代理配置](./cloudflare-author-proxy.md)。只有继续启用 Sveltia CMS 时才需要配置本文的 GitHub OAuth。
+
 Firefly 使用 Sveltia CMS 提供 `/admin/` 内容后台。后台不会直接修改线上服务器，而是把文章、个人资料和图片提交到 GitHub；Cloudflare Workers & Pages 检测到提交后重新构建并发布站点。
 
 ## 当前可管理内容
