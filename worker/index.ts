@@ -199,6 +199,7 @@ function githubHeaders(token: string): HeadersInit {
 	return {
 		Accept: "application/vnd.github+json",
 		Authorization: `Bearer ${token}`,
+		"User-Agent": "Firefly-Author-Proxy",
 		"X-GitHub-Api-Version": githubApiVersion,
 	};
 }
@@ -224,15 +225,24 @@ function encodeGitHubContent(value: string): string {
 	return btoa(binary);
 }
 
-async function githubError(response: Response): Promise<HttpError> {
+async function githubError(
+	response: Response,
+	operation = "访问仓库",
+): Promise<HttpError> {
 	const payload = (await response.json().catch(() => ({}))) as {
 		message?: string;
 	};
+	const acceptedPermissions = response.headers.get(
+		"X-Accepted-GitHub-Permissions",
+	);
+	const rateLimitRemaining = response.headers.get("X-RateLimit-Remaining");
+	const githubDetail = payload.message?.trim() || `HTTP ${response.status}`;
 	const messages: Record<number, string> = {
 		401: "Cloudflare 中保存的 GitHub Token 无效或已过期。",
-		403: payload.message
-			? `GitHub 拒绝访问：${payload.message}。请确认 Fine-grained Token 已选择 Firefly 仓库，并将 Contents 设置为 Read and write。`
-			: "GitHub Token 没有 Firefly 仓库的 Contents 读写权限。",
+		403:
+			rateLimitRemaining === "0"
+				? `GitHub API 请求次数已用完：${githubDetail}。请稍后重试。`
+				: `GitHub 在“${operation}”时拒绝请求（403）：${githubDetail}。${acceptedPermissions ? `该接口要求：${acceptedPermissions}。` : ""}`,
 		404: "找不到 Firefly 仓库或目标文件。",
 		409: "远程文件已发生变化，请刷新页面后重试。",
 		422: "GitHub 拒绝了本次提交，请检查提交内容。",
@@ -264,7 +274,7 @@ async function readRepositoryFile(env: Env, key: string): Promise<Response> {
 		`${githubContentUrl(env, path)}?ref=${encodeURIComponent(config.branch)}`,
 		{ headers: githubHeaders(config.token) },
 	);
-	if (!response.ok) throw await githubError(response);
+	if (!response.ok) throw await githubError(response, `读取 ${path}`);
 	const payload = (await response.json()) as GitHubFile;
 	if (!payload.content || !payload.sha) {
 		throw new HttpError(
@@ -318,7 +328,7 @@ async function writeGitHubFile(
 			...(sha ? { sha } : {}),
 		}),
 	});
-	if (!response.ok) throw await githubError(response);
+	if (!response.ok) throw await githubError(response, `写入 ${path}`);
 	const payload = (await response.json()) as {
 		content?: { sha?: string };
 		commit?: { html_url?: string };
@@ -392,7 +402,8 @@ async function publishArticle(request: Request, env: Env): Promise<Response> {
 	);
 	let sha: string | undefined;
 	if (current.ok) sha = ((await current.json()) as GitHubFile).sha;
-	else if (current.status !== 404) throw await githubError(current);
+	else if (current.status !== 404)
+		throw await githubError(current, `检查文章 ${path}`);
 	const slug = fileName.slice(0, -3);
 	return writeGitHubFile(
 		env,
