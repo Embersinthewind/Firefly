@@ -488,76 +488,82 @@ async function publishArticle() {
 <section class="writer-studio card-base">
 	<div class="writer-actions">
 		<div class="writer-actions__group">
-			<label class="file-action"><input type="file" accept=".md,.mdx,text/markdown" onchange={importMarkdown} /><span>上传 MD</span></label>
-			<button type="button" onclick={downloadMarkdown}>下载 MD</button>
-			<button type="button" onclick={saveBrowserDraft}>保存草稿</button>
-			<button type="button" onclick={loadBrowserDraft}>载入草稿</button>
+			<a class="action-link" href="/articles/"><span aria-hidden="true">←</span> 返回列表</a>
+			<label class="file-action action-quiet"><input type="file" accept=".md,.mdx,text/markdown" onchange={importMarkdown} /><span><b aria-hidden="true">⇧</b> 导入 MD</span></label>
+			<button type="button" class="action-quiet" onclick={() => (editorMode = editorMode === "write" ? "preview" : "write")}><span aria-hidden="true">{editorMode === "write" ? "◉" : "✎"}</span> {editorMode === "write" ? "预览" : "返回编辑"}</button>
 		</div>
 		<div class="writer-actions__group">
+			<button type="button" class="action-quiet" onclick={downloadMarkdown}><span aria-hidden="true">↓</span> 下载 MD</button>
+			<button type="button" class="action-save" onclick={saveBrowserDraft}><span aria-hidden="true">▣</span> 保存草稿</button>
+			<button type="button" class="action-quiet" onclick={loadBrowserDraft}><span aria-hidden="true">↺</span> 载入草稿</button>
 			{#if githubAuthorized}
-				<button type="button" class="github-state" onclick={logoutAuthor} title="退出 Cloudflare 作者模式">{githubUser}</button>
+				<button type="button" class="github-state" onclick={logoutAuthor} title="退出作者模式"><span aria-hidden="true">●</span> {githubUser}</button>
 			{:else}
-				<button type="button" onclick={connectAuthor}>作者登录</button>
+				<button type="button" class="action-auth" onclick={connectAuthor}><span aria-hidden="true">◇</span> 作者登录</button>
 			{/if}
-			<button type="button" class="primary" onclick={publishArticle} disabled={isPublishing}>{isPublishing ? "提交中…" : draft ? "提交草稿" : "发布文章"}</button>
+			<button type="button" class="primary" onclick={publishArticle} disabled={isPublishing}><span aria-hidden="true">↑</span> {isPublishing ? "提交中…" : draft ? "提交草稿" : "发布文章"}</button>
 		</div>
 	</div>
 
-	<input class="title-input" bind:value={title} placeholder="输入文章标题…" aria-label="文章标题" />
+	<div class="writer-workspace">
+		<main class="writer-canvas">
+			<input class="title-input" bind:value={title} placeholder="输入文章标题…" aria-label="文章标题" />
 
-	<div class="meta-grid" aria-label="文章设置">
-		<label class="meta-wide">文章摘要<input bind:value={description} placeholder="用于文章列表与 SEO 的简短摘要" /></label>
-		<label>标签<input bind:value={tags} placeholder="使用 # 分隔，例如 #技术 #Astro" /></label>
-		<label>分类<input bind:value={category} list="writer-category-list" placeholder="选择或输入分类" /></label>
-		<datalist id="writer-category-list">{#each categories as item}<option value={item}></option>{/each}</datalist>
-		<label>发布日期<input type="date" bind:value={published} /></label>
-		<div class="cover-control">
-			<span>封面图片</span>
-			{#if coverPreview || cover}
-				<div class="cover-preview-wrap">
-					<label class="cover-preview" class:is-success={coverUploadState === "success"} class:is-error={coverUploadState === "error"} aria-live="polite" title="单击更换封面">
-						<input type="file" accept="image/*" onchange={handleCoverInput} disabled={isUploading} />
-						<img src={coverPreview || cover} alt="文章封面预览" />
-						<span class="cover-preview__text">
-							<strong>{coverUploadState === "uploading" ? "正在上传…" : coverUploadState === "success" ? "✓ 已上传" : coverUploadState === "error" ? "上传失败" : "封面预览"}</strong>
-							<small title={coverFileName}>{coverFileName || "远程封面"}</small>
-							{#if coverUploadState === "uploading"}<span class="cover-progress" aria-hidden="true"><span></span></span>{/if}
-						</span>
-					</label>
-					<button type="button" class="cover-remove" onclick={clearCover} aria-label="移除封面" title="移除封面">×</button>
+			<div class="editor-toolbar" aria-label="Markdown 编辑工具">
+				<button type="button" onclick={() => wrapSelection("**", "**")} aria-label="加粗">B</button>
+				<button type="button" class="italic" onclick={() => wrapSelection("*", "*")} aria-label="斜体">I</button>
+				<button type="button" onclick={() => prefixLine("## ")} aria-label="二级标题">H2</button>
+				<button type="button" onclick={() => prefixLine("### ")} aria-label="三级标题">H3</button>
+				<button type="button" onclick={() => prefixLine("> ")} aria-label="引用">❝</button>
+				<button type="button" onclick={() => wrapSelection("`", "`")} aria-label="行内代码">&lt;/&gt;</button>
+				<button type="button" onclick={() => prefixLine("- ")} aria-label="无序列表">☷</button>
+				<button type="button" onclick={() => prefixLine("1. ")} aria-label="有序列表">☰</button>
+				<button type="button" onclick={() => wrapSelection("[", "](https://)", "链接文字")} aria-label="链接">↗</button>
+				<label class="toolbar-upload" title="上传正文图片"><input type="file" accept="image/*" onchange={handleBodyImageInput} disabled={isUploading} /><span aria-hidden="true">▣</span><span class="sr-only">上传正文图片</span></label>
+				{#if isUploading || statusTone !== "neutral"}<span class:status-success={statusTone === "success"} class:status-error={statusTone === "error"} class="upload-feedback" role="status">{isUploading ? "图片上传中…" : status}</span>{/if}
+			</div>
+
+			{#if editorMode === "write"}
+				<textarea class="markdown-editor" bind:this={textareaRef} bind:value={content} onpaste={handlePaste} ondragover={(event) => event.preventDefault()} ondrop={handleDrop} placeholder="开始写作… 支持 Markdown，也可以直接粘贴或拖入图片。"></textarea>
+			{:else}
+				<div class="markdown-preview">{@html previewHtml || "<p>还没有正文内容。</p>"}</div>
+			{/if}
+		</main>
+
+		<aside class="writer-sidebar" aria-label="文章设置">
+			<div class="settings-heading"><span aria-hidden="true">◫</span><div><strong>文章设置</strong><small>发布信息与展示选项</small></div></div>
+			<div class="meta-grid">
+				<label class="meta-wide">文章摘要<textarea bind:value={description} rows="4" placeholder="用于文章列表与 SEO 的简短摘要"></textarea></label>
+				<label>标签<input bind:value={tags} placeholder="使用 # 分隔，例如 #技术 #Astro" /></label>
+				<label>分类<input bind:value={category} list="writer-category-list" placeholder="选择或输入分类" /></label>
+				<datalist id="writer-category-list">{#each categories as item}<option value={item}></option>{/each}</datalist>
+				<label>发布日期<input type="date" bind:value={published} /></label>
+				<div class="cover-control">
+					<span>封面图片</span>
+					{#if coverPreview || cover}
+						<div class="cover-preview-wrap">
+							<label class="cover-preview" class:is-success={coverUploadState === "success"} class:is-error={coverUploadState === "error"} aria-live="polite" title="单击更换封面">
+								<input type="file" accept="image/*" onchange={handleCoverInput} disabled={isUploading} />
+								<img src={coverPreview || cover} alt="文章封面预览" />
+								<span class="cover-preview__text">
+									<strong>{coverUploadState === "uploading" ? "正在上传…" : coverUploadState === "success" ? "✓ 已上传" : coverUploadState === "error" ? "上传失败" : "封面预览"}</strong>
+									<small title={coverFileName}>{coverFileName || "远程封面"}</small>
+									{#if coverUploadState === "uploading"}<span class="cover-progress" aria-hidden="true"><span></span></span>{/if}
+								</span>
+							</label>
+							<button type="button" class="cover-remove" onclick={clearCover} aria-label="移除封面" title="移除封面">×</button>
+						</div>
+					{:else}
+						<label class="cover-upload"><input type="file" accept="image/*" onchange={handleCoverInput} disabled={isUploading} /><span>上传封面</span></label>
+					{/if}
 				</div>
-			{:else}
-				<label class="cover-upload"><input type="file" accept="image/*" onchange={handleCoverInput} disabled={isUploading} /><span>上传封面</span></label>
-			{/if}
-		</div>
-		<div class="publish-flags">
-			<label><input type="checkbox" bind:checked={draft} /><span>草稿</span></label>
-			<label><input type="checkbox" bind:checked={pinned} /><span>置顶</span></label>
-		</div>
+				<div class="publish-flags">
+					<label><input type="checkbox" bind:checked={draft} /><span>草稿（不发布）</span></label>
+					<label><input type="checkbox" bind:checked={pinned} /><span>置顶文章</span></label>
+				</div>
+			</div>
+		</aside>
 	</div>
-
-	<div class="editor-toolbar" aria-label="Markdown 编辑工具">
-		<button type="button" onclick={() => wrapSelection("**", "**")} aria-label="加粗">B</button>
-		<button type="button" class="italic" onclick={() => wrapSelection("*", "*")} aria-label="斜体">I</button>
-		<button type="button" onclick={() => prefixLine("## ")} aria-label="二级标题">H2</button>
-		<button type="button" onclick={() => prefixLine("### ")} aria-label="三级标题">H3</button>
-		<button type="button" onclick={() => prefixLine("> ")} aria-label="引用">❝</button>
-		<button type="button" onclick={() => wrapSelection("`", "`")} aria-label="行内代码">&lt;/&gt;</button>
-		<button type="button" onclick={() => prefixLine("- ")} aria-label="无序列表">☷</button>
-		<button type="button" onclick={() => prefixLine("1. ")} aria-label="有序列表">☰</button>
-		<button type="button" onclick={() => wrapSelection("[", "](https://)", "链接文字")} aria-label="链接">↗</button>
-		<label class="toolbar-upload" title="上传正文图片"><input type="file" accept="image/*" onchange={handleBodyImageInput} disabled={isUploading} /><span aria-hidden="true">▣</span><span class="sr-only">上传正文图片</span></label>
-		{#if isUploading || statusTone !== "neutral"}<span class:status-success={statusTone === "success"} class:status-error={statusTone === "error"} class="upload-feedback" role="status">{isUploading ? "图片上传中…" : status}</span>{/if}
-		<span class="toolbar-spacer"></span>
-		<button type="button" class:active={editorMode === "write"} onclick={() => (editorMode = "write")}>编辑</button>
-		<button type="button" class:active={editorMode === "preview"} onclick={() => (editorMode = "preview")}>预览</button>
-	</div>
-
-	{#if editorMode === "write"}
-		<textarea class="markdown-editor" bind:this={textareaRef} bind:value={content} onpaste={handlePaste} ondragover={(event) => event.preventDefault()} ondrop={handleDrop} placeholder="开始写作… 支持 Markdown，也可以直接粘贴或拖入图片。"></textarea>
-	{:else}
-		<div class="markdown-preview">{@html previewHtml || "<p>还没有正文内容。</p>"}</div>
-	{/if}
 
 	<footer class:status-success={statusTone === "success"} class:status-error={statusTone === "error"} class="editor-status" role="status">
 		<span>{content.length.toLocaleString()} 字符</span><span>{status}</span>
@@ -567,26 +573,37 @@ async function publishArticle() {
 
 <style>
 	.writer-studio { overflow: hidden; color: var(--deep-text); }
-	.writer-actions { display: flex; align-items: center; justify-content: space-between; gap: .75rem; padding: .7rem .85rem; border-bottom: 1px solid var(--line-divider); background: color-mix(in oklch, var(--btn-regular-bg) 35%, var(--card-bg)); }
-	.writer-actions__group { display: flex; flex-wrap: wrap; gap: .4rem; }
-	button, .file-action > span, .cover-upload > span { display: inline-flex; align-items: center; justify-content: center; min-height: 2.25rem; padding: .42rem .7rem; border: 1px solid var(--line-divider); border-radius: .45rem; background: var(--card-bg); color: var(--deep-text); font-size: .72rem; font-weight: 800; cursor: pointer; }
-	button:hover, .file-action:hover > span, .cover-upload:hover > span { border-color: var(--primary); color: var(--primary); }
+	.writer-actions { display: flex; align-items: center; justify-content: space-between; gap: .75rem; padding: .65rem .85rem; border-bottom: 1px solid var(--line-divider); background: var(--card-bg); }
+	.writer-actions__group { display: flex; align-items: center; flex-wrap: wrap; gap: .35rem; }
+	button, .action-link, .file-action > span, .cover-upload > span { display: inline-flex; align-items: center; justify-content: center; gap: .35rem; min-height: 2.3rem; padding: .42rem .7rem; border: 1px solid var(--line-divider); border-radius: .5rem; background: var(--card-bg); color: var(--deep-text); font-size: .72rem; font-weight: 800; line-height: 1; text-decoration: none; cursor: pointer; }
+	button:hover, .action-link:hover, .file-action:hover > span, .cover-upload:hover > span { border-color: var(--primary); color: var(--primary); }
+	.action-quiet, .action-link, .file-action.action-quiet > span { border-color: transparent; background: transparent; color: var(--content-meta); }
+	.action-save { border-color: color-mix(in oklch, var(--primary) 48%, var(--line-divider)); color: var(--primary); }
+	.action-auth { border-color: #f59e0b; color: #c56b00; }
 	button.primary { border-color: var(--primary); background: var(--primary); color: oklch(.18 .02 var(--hue)); }
 	button:disabled { cursor: wait; opacity: .58; }
-	.github-state { color: var(--primary); }
+	.github-state { border-color: color-mix(in oklch, #15803d 48%, var(--line-divider)); color: color-mix(in oklch, #15803d 82%, var(--deep-text)); }
 	.file-action input, .toolbar-upload input, .cover-upload input, .cover-preview input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
-	.github-auth { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .5rem; padding: .75rem .85rem; border-bottom: 1px solid var(--line-divider); background: color-mix(in oklch, var(--primary) 7%, var(--card-bg)); }
-	.github-auth input { min-width: 0; }
-	.title-input { width: 100%; min-height: 5rem; padding: 1rem 1.25rem; border: 0; border-bottom: 1px solid var(--line-divider); background: transparent; color: var(--deep-text); font-size: 2.15rem; font-weight: 850; letter-spacing: -.035em; outline: none; }
-	.meta-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: .65rem; padding: .85rem; border-bottom: 1px solid var(--line-divider); background: color-mix(in oklch, var(--btn-regular-bg) 28%, var(--card-bg)); }
-	.meta-grid > label { display: grid; gap: .3rem; min-width: 0; color: var(--content-meta); font-size: .68rem; font-weight: 800; }
-	.meta-wide { grid-column: span 2; }
-	.meta-grid input, .github-auth input { width: 100%; min-height: 2.35rem; padding: .48rem .6rem; border: 1px solid var(--line-divider); border-radius: .45rem; background: var(--card-bg); color: var(--deep-text); font: inherit; font-size: .73rem; outline: none; }
-	.meta-grid input::placeholder, .github-auth input::placeholder, .markdown-editor::placeholder { color: color-mix(in oklch, var(--content-meta) 55%, transparent); opacity: 1; }
-	.cover-control { display: flex; align-items: center; gap: .45rem; min-width: 0; grid-column: span 2; }
-	.cover-control > span:first-child { color: var(--content-meta); font-size: .68rem; font-weight: 800; white-space: nowrap; }
+
+	.writer-workspace { display: grid; grid-template-columns: minmax(0, 1fr) clamp(16rem, 22vw, 19rem); min-height: 48rem; }
+	.writer-canvas { min-width: 0; border-right: 1px solid var(--line-divider); background: var(--card-bg); }
+	.writer-sidebar { min-width: 0; padding: 1rem; background: color-mix(in oklch, var(--btn-regular-bg) 32%, var(--card-bg)); }
+	.settings-heading { display: flex; align-items: center; gap: .55rem; padding: .15rem .1rem .9rem; border-bottom: 1px solid var(--line-divider); }
+	.settings-heading > span { display: grid; width: 2rem; height: 2rem; place-items: center; border-radius: .45rem; background: color-mix(in oklch, var(--primary) 12%, var(--card-bg)); color: var(--primary); font-weight: 900; }
+	.settings-heading > div { display: grid; gap: .12rem; }
+	.settings-heading strong { font-size: .82rem; }
+	.settings-heading small { color: var(--content-meta); font-size: .62rem; }
+	.title-input { box-sizing: border-box; width: 100%; min-height: 5.5rem; padding: 1.15rem 1.5rem; border: 0; border-bottom: 1px solid var(--line-divider); background: transparent; color: var(--deep-text); font-size: 2.15rem; font-weight: 850; letter-spacing: -.035em; outline: none; }
+
+	.meta-grid { display: flex; flex-direction: column; gap: .8rem; padding-top: 1rem; }
+	.meta-grid > label { display: grid; gap: .35rem; min-width: 0; color: var(--deep-text); font-size: .69rem; font-weight: 800; }
+	.meta-grid input, .meta-grid textarea { box-sizing: border-box; width: 100%; min-height: 2.45rem; padding: .52rem .62rem; border: 1px solid var(--line-divider); border-radius: .45rem; background: var(--card-bg); color: var(--deep-text); font: inherit; font-size: .73rem; line-height: 1.55; outline: none; resize: vertical; }
+	.meta-grid textarea { min-height: 5.5rem; }
+	.meta-grid input::placeholder, .meta-grid textarea::placeholder, .markdown-editor::placeholder { color: color-mix(in oklch, var(--content-meta) 72%, transparent); opacity: 1; }
+	.cover-control { display: grid; gap: .4rem; min-width: 0; }
+	.cover-control > span:first-child { color: var(--deep-text); font-size: .69rem; font-weight: 800; }
 	.cover-preview-wrap { position: relative; min-width: 0; }
-	.cover-preview { display: flex; align-items: center; gap: .5rem; min-width: 0; padding: .25rem .55rem .25rem .25rem; border: 1px solid var(--line-divider); border-radius: .5rem; background: var(--card-bg); cursor: pointer; transition: border-color 180ms ease, background-color 180ms ease; }
+	.cover-preview { display: flex; align-items: center; gap: .5rem; min-width: 0; padding: .3rem .55rem .3rem .3rem; border: 1px solid var(--line-divider); border-radius: .5rem; background: var(--card-bg); cursor: pointer; transition: border-color 180ms ease, background-color 180ms ease; }
 	.cover-preview:hover { border-color: var(--primary); background: color-mix(in oklch, var(--primary) 5%, var(--card-bg)); }
 	.cover-preview.is-success { border-color: color-mix(in oklch, #15803d 55%, var(--line-divider)); }
 	.cover-preview.is-error { border-color: color-mix(in oklch, #dc2626 55%, var(--line-divider)); }
@@ -601,27 +618,28 @@ async function publishArticle() {
 	@keyframes cover-upload-progress { from { transform: translateX(-105%); } to { transform: translateX(245%); } }
 	.cover-remove { position: absolute; top: -.4rem; right: -.4rem; width: 1.35rem; min-height: 1.35rem; padding: 0; border-color: color-mix(in oklch, #dc2626 45%, var(--line-divider)); border-radius: 999px; background: var(--card-bg); color: #dc2626; font-size: .8rem; line-height: 1; opacity: 0; transform: scale(.82); transition: opacity 160ms ease, transform 160ms ease; }
 	.cover-preview-wrap:hover .cover-remove, .cover-preview-wrap:focus-within .cover-remove { opacity: 1; transform: scale(1); }
-	.cover-upload > span { min-height: 2.35rem; white-space: nowrap; }
-	.publish-flags { display: flex; align-items: center; gap: .65rem; }
-	.publish-flags label { display: flex; align-items: center; gap: .3rem; color: var(--deep-text); font-size: .72rem; font-weight: 750; }
+	.cover-upload > span { width: 100%; min-height: 2.45rem; }
+	.publish-flags { display: grid; gap: .55rem; padding-top: .75rem; border-top: 1px solid var(--line-divider); }
+	.publish-flags label { display: flex; align-items: center; gap: .4rem; color: var(--deep-text); font-size: .72rem; font-weight: 750; }
 	.publish-flags input { width: 1rem; min-height: 1rem; accent-color: var(--primary); }
-	.editor-toolbar { display: flex; align-items: center; gap: .15rem; overflow-x: auto; padding: .42rem .7rem; border-bottom: 1px solid var(--line-divider); scrollbar-width: thin; }
+
+	.editor-toolbar { display: flex; align-items: center; gap: .15rem; overflow-x: auto; min-height: 3rem; padding: .4rem 1rem; border-bottom: 1px solid var(--line-divider); scrollbar-width: thin; }
 	.editor-toolbar button, .toolbar-upload { display: grid; place-items: center; flex: 0 0 auto; width: 2.15rem; height: 2.15rem; min-height: 0; padding: 0; border: 0; border-radius: .4rem; background: transparent; color: var(--content-meta); font-size: .7rem; font-weight: 850; cursor: pointer; }
-	.editor-toolbar button:hover, .editor-toolbar button.active, .toolbar-upload:hover { background: var(--btn-regular-bg); color: var(--primary); }
-	.upload-feedback { max-width: 20rem; overflow: hidden; padding-inline: .5rem; color: var(--content-meta); font-size: .66rem; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+	.editor-toolbar button:hover, .toolbar-upload:hover { background: var(--btn-regular-bg); color: var(--primary); }
+	.upload-feedback { max-width: 18rem; overflow: hidden; padding-inline: .5rem; color: var(--content-meta); font-size: .66rem; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
 	.italic { font-style: italic; }
-	.toolbar-spacer { flex: 1; }
-	.markdown-editor, .markdown-preview { box-sizing: border-box; width: 100%; min-height: 42rem; padding: 1.35rem 1.5rem; border: 0; background: transparent; color: var(--deep-text); font-size: .9rem; line-height: 1.85; outline: none; }
+	.markdown-editor, .markdown-preview { box-sizing: border-box; width: 100%; min-height: 42rem; padding: 1.6rem 1.75rem; border: 0; background: transparent; color: var(--deep-text); font-size: .9rem; line-height: 1.85; outline: none; }
 	.markdown-editor { resize: vertical; font-family: "JetBrains Mono", "Fira Code", Consolas, monospace; }
 	.markdown-preview { overflow: auto; }
 	.markdown-preview :global(img) { max-width: 100%; border-radius: .6rem; }
-	.editor-status { display: flex; flex-wrap: wrap; gap: .8rem; padding: .55rem .9rem; border-top: 1px solid var(--line-divider); color: var(--content-meta); font-size: .68rem; }
+	.editor-status { display: flex; flex-wrap: wrap; gap: .8rem; padding: .6rem .9rem; border-top: 1px solid var(--line-divider); color: var(--content-meta); font-size: .68rem; }
 	.editor-status a { margin-left: auto; color: var(--primary); font-weight: 750; }
 	.status-success { color: color-mix(in oklch, #15803d 78%, var(--deep-text)); }
 	.status-error { color: #dc2626; }
-	input:focus-visible, textarea:focus-visible, button:focus-visible, .file-action:focus-within span, .cover-upload:focus-within span, .toolbar-upload:focus-within { outline: 2px solid var(--primary); outline-offset: 2px; }
-	@media (max-width: 1100px) { .meta-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+	input:focus-visible, textarea:focus-visible, button:focus-visible, .action-link:focus-visible, .file-action:focus-within span, .cover-upload:focus-within span, .cover-preview:focus-within, .toolbar-upload:focus-within { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+	@media (max-width: 960px) { .writer-workspace { grid-template-columns: 1fr; } .writer-canvas { border-right: 0; } .writer-sidebar { border-top: 1px solid var(--line-divider); } .meta-grid { display: grid; grid-template-columns: 1fr 1fr; } .meta-wide, .cover-control, .publish-flags { grid-column: 1 / -1; } }
 	@media (hover: none) { .cover-remove { opacity: 1; transform: scale(1); } }
 	@media (prefers-reduced-motion: reduce) { .cover-preview, .cover-remove { transition: none; } .cover-progress > span { width: 70%; animation: none; } }
-	@media (max-width: 640px) { .writer-actions { align-items: stretch; flex-direction: column; } .writer-actions__group > * { flex: 1; } .github-auth { grid-template-columns: 1fr; } .title-input { font-size: 1.65rem; } .meta-grid { grid-template-columns: 1fr 1fr; } .meta-wide { grid-column: span 2; } .cover-control, .publish-flags { grid-column: span 2; } .markdown-editor, .markdown-preview { min-height: 34rem; padding-inline: 1rem; } }
+	@media (max-width: 640px) { .writer-actions { align-items: stretch; flex-direction: column; } .writer-actions__group { width: 100%; } .writer-actions__group > * { flex: 1; } .title-input { min-height: 4.75rem; padding-inline: 1rem; font-size: 1.65rem; } .meta-grid { grid-template-columns: 1fr; } .meta-wide, .cover-control, .publish-flags { grid-column: auto; } .markdown-editor, .markdown-preview { min-height: 34rem; padding-inline: 1rem; } }
 </style>
