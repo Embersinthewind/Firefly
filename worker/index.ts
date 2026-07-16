@@ -72,7 +72,7 @@ function authorConfig(env: Env) {
 	const sessionSecret = env.AUTHOR_SESSION_SECRET?.trim();
 	if (
 		!password ||
-		password.length < 16 ||
+		password.length < 8 ||
 		!sessionSecret ||
 		sessionSecret.length < 32
 	) {
