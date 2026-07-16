@@ -104,6 +104,8 @@ export default defineConfig({
 				"#swup-container",
 				"#left-sidebar-dynamic",
 				"#right-sidebar-dynamic",
+				"#category-bar-wrapper",
+				"#mobile-bottom-sidebar",
 				"#floating-toc-wrapper",
 			],
 			smoothScrolling: false,
@@ -330,4 +332,3 @@ export default defineConfig({
 		},
 	},
 });
-

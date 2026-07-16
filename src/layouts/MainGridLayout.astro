@@ -824,47 +824,27 @@ const hasMultipleImages =
           data-show-both-sidebars-on-post={sidebarLayoutConfig.showBothSidebarsOnPostPage ? "true" : "false"}
         >
 
-            {/* 渲染左侧边栏 - 根据position和tabletSidebar配置显示 */}
-            {/*
-                如果全局配置为双侧栏(position: both)或仅左侧栏(position: left)，则使用静态容器(不被swup替换)，避免闪烁。
-                如果全局配置为仅右侧栏(position: right)，则使用动态容器(被swup替换)，以便在文章页显示左侧栏。
-                注意：为了满足swup要求所有containers必须存在，我们在所有模式下都必须渲染 #left-sidebar-dynamic。
-            */}
-            {contentOnly ? (
-				<>
-					<div id="left-sidebar-wrapper" class="hidden"></div>
-					<div id="left-sidebar-dynamic" class="hidden transition-swup-fade"></div>
-				</>
-			) : sidebarLayoutConfig.position !== "right" ? (
-                <>
-                    {sidebarLayoutConfig.enable ? (
-                        <div id="left-sidebar-wrapper" class="contents" data-hide-sidebar-on-post={hideSidebarOnPostPage ? "true" : "false"} style="contain: layout style paint;">
-                            {effectiveHasLeftComponents && (
-                                <SideBar
-                                    side={effectiveIsBothSidebars ? "left" : undefined}
-                                    class={sidebarClass}
-                                    headings={headings}
-                                    encrypted={encrypted}
-                                />
-                            )}
-                        </div>
-                    ) : (
-                        <div id="left-sidebar-wrapper" class="hidden"></div>
-                    )}
-                    <div id="left-sidebar-dynamic" class="hidden transition-swup-fade"></div>
-                </>
-            ) : (
-                <div id="left-sidebar-dynamic" class="contents transition-swup-fade">
-                    {effectiveIsBothSidebars && effectiveHasLeftComponents && (
-						<SideBar side="left" class={sidebarClass} headings={headings} encrypted={encrypted}></SideBar>
-                    )}
-                </div>
-            )}
+			{/* 侧栏始终放在 Swup 容器中，使首页与专注内容页互相切换时结构同步更新。 */}
+			<div
+				id="left-sidebar-dynamic"
+				class:list={["transition-swup-fade", contentOnly ? "hidden" : "contents"]}
+			>
+				{!contentOnly && effectiveHasLeftComponents && (
+					<SideBar
+						side={effectiveIsBothSidebars ? "left" : undefined}
+						class={sidebarClass}
+						headings={headings}
+						encrypted={encrypted}
+					/>
+				)}
+			</div>
                     
             {/* 主内容区包装器 - 包含静态栏位和swup容器，作为单个grid item */}
             <div class={staticBarClass} data-main-content>
                 {/* 分类导航栏 - 全站渲染并显示 */}
-                {shouldRenderCategoryBar && <div id="category-bar-wrapper"><CategoryBar currentPostCategory={postCategory} /></div>}
+				<div id="category-bar-wrapper" class:list={["transition-swup-fade", !shouldRenderCategoryBar && "hidden"]}>
+					{shouldRenderCategoryBar && <CategoryBar currentPostCategory={postCategory} />}
+				</div>
                 {/* 主内容区 - 始终渲染，确保 Swup 容器存在 */}
                 <main
                     id="swup-container"
@@ -872,7 +852,14 @@ const hasMultipleImages =
                     data-current-post-category={postCategory || ""}
                 >
                 {/* 携带网格布局类名，用于JS更新父容器 */}
-                <div id="grid-class-carrier" data-grid-class={gridCols} class="hidden"></div>
+				<div
+					id="grid-class-carrier"
+					data-grid-class={gridCols}
+					data-content-only={contentOnly ? "true" : "false"}
+					data-main-content-class={staticBarClass}
+					data-footer-class={footerClassName}
+					class="hidden"
+				></div>
                 {/* 为每个页面提供一个隐藏的h1标题，用于SEO和可访问性 */}
                 <h1 class="sr-only">{title}</h1>
                 <div id="content-wrapper" class="onload-animation transition-leaving">
@@ -881,45 +868,34 @@ const hasMultipleImages =
             </main>
             </div>
 
-            {/* 右侧边栏 - 双侧边栏模式或仅右侧栏模式 */}
-            {/*
-                如果全局配置为双侧栏(position: both)或仅右侧栏(position: right)，则使用静态容器(不被swup替换)，避免闪烁。
-                如果全局配置为单侧栏(position: left)，则使用动态容器(被swup替换)，以便在文章页显示右侧栏。
-                注意：为了满足swup要求所有containers必须存在，我们在所有模式下都必须渲染 #right-sidebar-dynamic。
-                右侧边栏的显示由CSS类控制。
-            */}
-            {contentOnly ? (
-				<>
-					<div id="right-sidebar-static" class="hidden"></div>
-					<div id="right-sidebar-dynamic" class="hidden transition-swup-fade"></div>
-				</>
-			) : (sidebarLayoutConfig.position === "both" || sidebarLayoutConfig.position === "right") ? (
-                <>
-                    {sidebarLayoutConfig.enable ? (
-                        <div id="right-sidebar-static" class="contents" data-hide-sidebar-on-post={hideSidebarOnPostPage ? "true" : "false"}>
-                            {(effectiveIsBothSidebars || sidebarLayoutConfig.position === "right") && effectiveHasRightComponents && (
-								<SideBar side="right" class={rightSidebarClass} headings={headings} encrypted={encrypted}></SideBar>
-                            )}
-                        </div>
-                    ) : (
-                        <div id="right-sidebar-static" class="hidden"></div>
-                    )}
-                    <div id="right-sidebar-dynamic" class="hidden transition-swup-fade"></div>
-                </>
-            ) : (
-                <div id="right-sidebar-dynamic" class="contents transition-swup-fade">
-                    {effectiveIsBothSidebars && effectiveHasRightComponents && (
-						<SideBar side="right" class={rightSidebarClass} headings={headings} encrypted={encrypted}></SideBar>
-                    )}
-                </div>
-            )}
+			<div
+				id="right-sidebar-dynamic"
+				class:list={["transition-swup-fade", contentOnly ? "hidden" : "contents"]}
+			>
+				{!contentOnly && effectiveHasRightComponents && (
+					<SideBar
+						side="right"
+						class={rightSidebarClass}
+						headings={headings}
+						encrypted={encrypted}
+					/>
+				)}
+			</div>
 
             {/* 移动端底部组件 - 768px及以下显示 */}
-            {!contentOnly && sidebarLayoutConfig.mobileBottomComponents && sidebarLayoutConfig.mobileBottomComponents.length > 0 && (
-                <div id="mobile-bottom-sidebar" class="col-span-1 block md:hidden mt-4">
-					<SideBar side="bottom" headings={headings} encrypted={encrypted}></SideBar>
-                </div>
-            )}
+			<div
+				id="mobile-bottom-sidebar"
+				class:list={[
+					"transition-swup-fade",
+					!contentOnly && sidebarLayoutConfig.mobileBottomComponents && sidebarLayoutConfig.mobileBottomComponents.length > 0
+						? "col-span-1 block md:hidden mt-4"
+						: "hidden",
+				]}
+			>
+				{!contentOnly && sidebarLayoutConfig.mobileBottomComponents && sidebarLayoutConfig.mobileBottomComponents.length > 0 && (
+					<SideBar side="bottom" headings={headings} encrypted={encrypted} />
+				)}
+			</div>
 
             <div class={footerClassName}>
                 <Footer></Footer>

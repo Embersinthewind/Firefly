@@ -173,6 +173,7 @@
 		"workStart": 9,
 		"workEnd": 18,
 		"workingLabel": "上班中",
+		"offworkLabel": "下班中",
 		"restingLabel": "休息中",
 		"linkUrl": "/about/"
 	}

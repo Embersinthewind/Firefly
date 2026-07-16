@@ -17,7 +17,12 @@ export type ProjectMeta = {
 	tags: string[];
 };
 
-export type HeroStatusMode = "schedule" | "working" | "resting" | "hidden";
+export type HeroStatusMode =
+	| "schedule"
+	| "working"
+	| "offwork"
+	| "resting"
+	| "hidden";
 
 export type SkillItem = {
 	name: string;
@@ -80,6 +85,7 @@ export type PortfolioData = {
 		workStart: number;
 		workEnd: number;
 		workingLabel: string;
+		offworkLabel: string;
 		restingLabel: string;
 		linkUrl: string;
 	};

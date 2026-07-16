@@ -51,11 +51,12 @@ const portfolioSchema = z.object({
 		mobileWallpaper: z.string(),
 	}),
 	statusEvent: z.object({
-		mode: z.enum(["schedule", "working", "resting", "hidden"]),
+		mode: z.enum(["schedule", "working", "offwork", "resting", "hidden"]),
 		timezone: z.string().min(1),
 		workStart: z.number().int().min(0).max(23),
 		workEnd: z.number().int().min(0).max(24),
 		workingLabel: z.string().min(1),
+		offworkLabel: z.string().min(1),
 		restingLabel: z.string().min(1),
 		linkUrl: z.string().min(1),
 	}),

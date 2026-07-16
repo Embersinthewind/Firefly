@@ -45,6 +45,12 @@ const {
 const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 const draftStorageKey = "firefly:config:draft";
 
+function normalizePortfolio(value: PortfolioData): PortfolioData {
+	const next = clone(value);
+	next.statusEvent.offworkLabel ||= "下班中";
+	return next;
+}
+
 function formatRepositoryJson(value: unknown): string {
 	const displayWidth = (text: string) =>
 		Array.from(text).reduce((width, character) => {
@@ -93,14 +99,14 @@ function formatRepositoryJson(value: unknown): string {
 
 let site = $state(clone(initialSite));
 let profile = $state(clone(initialProfile));
-let portfolio = $state(clone(initialPortfolio));
+let portfolio = $state(normalizePortfolio(initialPortfolio));
 let writerSettings = $state<KVaultWriterSettings>(
 	clone(defaultKVaultWriterSettings),
 );
 let baseline = $state({
 	site: clone(initialSite),
 	profile: clone(initialProfile),
-	portfolio: clone(initialPortfolio),
+	portfolio: normalizePortfolio(initialPortfolio),
 });
 let activeTab = $state<Tab>("site");
 let authorized = $state(false);
@@ -159,7 +165,7 @@ async function connectGitHub(redirectIfNeeded = false) {
 		]);
 		site = clone(siteFile.data as SiteEditorSiteData);
 		profile = clone(profileFile.data as SiteEditorProfileData);
-		portfolio = clone(portfolioFile.data as PortfolioData);
+		portfolio = normalizePortfolio(portfolioFile.data as PortfolioData);
 		baseline = {
 			site: clone(site),
 			profile: clone(profile),
@@ -220,7 +226,7 @@ function loadDraft() {
 		};
 		site = clone(draft.site);
 		profile = clone(draft.profile);
-		portfolio = clone(draft.portfolio);
+		portfolio = normalizePortfolio(draft.portfolio);
 		setStatus("已载入浏览器草稿，提交前请再次检查。", "success");
 	} catch {
 		setStatus("草稿格式无效。", "error");
@@ -443,7 +449,7 @@ onMount(() => {
 				<div class="config-section">
 					<header><h2>其他设置</h2><p>控制首页右下角状态事件，可按指定时区和工作时间自动切换。</p></header>
 					<div class="form-grid three">
-						<label>状态显示方式<select bind:value={portfolio.statusEvent.mode}><option value="schedule">按时间自动切换</option><option value="working">始终显示工作</option><option value="resting">始终显示休息</option><option value="hidden">隐藏状态圆圈</option></select></label>
+						<label>状态显示方式<select bind:value={portfolio.statusEvent.mode}><option value="schedule">按时间自动切换</option><option value="working">始终显示上班</option><option value="offwork">始终显示下班</option><option value="resting">始终显示休息</option><option value="hidden">隐藏状态圆圈</option></select></label>
 						<label>时区<input bind:value={portfolio.statusEvent.timezone} placeholder="Asia/Shanghai" /></label>
 						<label>点击跳转<input bind:value={portfolio.statusEvent.linkUrl} placeholder="/about/" /></label>
 					</div>
@@ -451,8 +457,9 @@ onMount(() => {
 						<label>上班时间（0–23）<input type="number" min="0" max="23" bind:value={portfolio.statusEvent.workStart} /></label>
 						<label>下班时间（1–24）<input type="number" min="1" max="24" bind:value={portfolio.statusEvent.workEnd} /></label>
 					</div>
-					<div class="form-grid two">
+					<div class="form-grid three">
 						<label>工作状态文字<input bind:value={portfolio.statusEvent.workingLabel} /></label>
+						<label>下班状态文字<input bind:value={portfolio.statusEvent.offworkLabel} /></label>
 						<label>休息状态文字<input bind:value={portfolio.statusEvent.restingLabel} /></label>
 					</div>
 				</div>

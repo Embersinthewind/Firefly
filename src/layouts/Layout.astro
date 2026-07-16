@@ -1526,10 +1526,45 @@ function disableAnimation() {
     clearColPositioning(swupContainer, swupContainer?.parentElement, mainGrid.querySelector('.footer'));
   }
 
+  // Swup 只替换页面内容和动态侧栏；这里把当前页面携带的布局状态同步回常驻网格。
+  function syncMainGridPageState(mainGrid: HTMLElement) {
+    const carrier = document.getElementById("grid-class-carrier") as HTMLElement | null;
+    if (!carrier) return;
+
+    mainGrid.dataset.contentOnly = carrier.dataset.contentOnly || "false";
+
+    const mainContent = mainGrid.querySelector<HTMLElement>("[data-main-content]");
+    if (mainContent && carrier.dataset.mainContentClass) {
+      mainContent.className = carrier.dataset.mainContentClass;
+    }
+
+    const footer = mainGrid.querySelector<HTMLElement>(".footer");
+    if (footer && carrier.dataset.footerClass) {
+      footer.className = carrier.dataset.footerClass;
+    }
+  }
+
   // 更新主网格的网格列数
   function updateMainGridCols() {
-    const mainGrid = document.getElementById("main-grid");
+    const mainGrid = document.getElementById("main-grid") as HTMLElement | null;
     if (!mainGrid) return;
+
+    syncMainGridPageState(mainGrid);
+
+    if (mainGrid.dataset.contentOnly === "true") {
+      applySingleColLayout(mainGrid);
+      return;
+    }
+
+    const carrier = document.getElementById("grid-class-carrier") as HTMLElement | null;
+    const carriedGridClasses = carrier?.dataset.gridClass?.trim();
+    if (carriedGridClasses) {
+      for (const cls of GRID_COL_CLASSES) mainGrid.classList.remove(cls);
+      for (const cls of carriedGridClasses.split(" ")) {
+        if (cls) mainGrid.classList.add(cls);
+      }
+      return;
+    }
 
     const sidebarEnabled = mainGrid.getAttribute("data-sidebar-enable") !== "false";
     const sidebarHideOnPost = mainGrid.getAttribute("data-grid-hide-sidebar-on-post") === "true";

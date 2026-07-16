@@ -1,5 +1,4 @@
 ---
-import { Icon } from "astro-icon/components";
 import { portfolioConfig, profileConfig, siteConfig } from "@/config";
 import { url } from "@/utils/url-utils";
 
@@ -8,9 +7,6 @@ const intro =
 	profileConfig.bio && profileConfig.bio !== "Hello, I'm Yiyu."
 		? profileConfig.bio
 		: "躬身入局，心为主理，行有尺度，自持本心.";
-const primaryLink = profileConfig.links.find((link) =>
-	link.name.toLowerCase().includes("github"),
-);
 const statusEvent = portfolioConfig.statusEvent;
 ---
 
@@ -18,14 +14,6 @@ const statusEvent = portfolioConfig.statusEvent;
 	<div class="home-hero-stage__copy">
 		<p class="home-hero-stage__role">[ 个人博客 / 内容主理 ]</p>
 		<h1>{displayTitle}</h1>
-		{
-			primaryLink && (
-				<a href={primaryLink.url} class="home-hero-stage__button" target="_blank" rel="noreferrer">
-					<Icon is:inline name={primaryLink.icon} />
-					<span>{primaryLink.name}</span>
-				</a>
-			)
-		}
 		<p class="home-hero-stage__motto">{intro}</p>
 	</div>
 
@@ -55,10 +43,18 @@ const statusEvent = portfolioConfig.statusEvent;
 				data-work-start={statusEvent.workStart}
 				data-work-end={statusEvent.workEnd}
 				data-working-label={statusEvent.workingLabel}
+				data-offwork-label={statusEvent.offworkLabel}
 				data-resting-label={statusEvent.restingLabel}
+				data-working-image={url("/assets/status/yinyue-working.gif")}
+				data-offwork-image={url("/assets/status/yinyue-offwork.gif")}
+				data-resting-image={url(profileConfig.avatar || "/favicon/favicon.ico")}
 			>
 				<span class="home-hero-stage__status-ring">
-					<img src={url(profileConfig.avatar || "/favicon/favicon.ico")} alt="" />
+					<img
+						src={url(profileConfig.avatar || "/favicon/favicon.ico")}
+						alt=""
+						data-hero-status-image
+					/>
 				</span>
 				<span class="home-hero-stage__status-label">
 					<i aria-hidden="true" />
@@ -130,24 +126,9 @@ const statusEvent = portfolioConfig.statusEvent;
 		text-wrap: balance;
 	}
 
-	.home-hero-stage__button {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.5rem;
-		min-height: 2.2rem;
-		margin-top: 1.4rem;
-		padding: 0.35rem 1rem;
-		border: 1px solid rgba(255, 255, 255, 0.42);
-		border-radius: 0.35rem;
-		background: rgba(255, 255, 255, 0.82);
-		color: rgba(0, 0, 0, 0.86);
-		font-weight: 900;
-		pointer-events: auto;
-	}
-
 	.home-hero-stage__motto {
 		max-width: 45rem;
-		margin: 2rem 0 0;
+		margin: 1.5rem 0 0;
 		color: rgba(255, 255, 255, 0.82);
 		font-size: clamp(1rem, 1.5vw, 1.35rem);
 		font-weight: 800;
@@ -283,6 +264,11 @@ const statusEvent = portfolioConfig.statusEvent;
 		box-shadow: 0 0 0 0.16rem rgba(245, 158, 11, 0.17);
 	}
 
+	.home-hero-stage__status.is-offwork .home-hero-stage__status-label i {
+		background: #60a5fa;
+		box-shadow: 0 0 0 0.16rem rgba(96, 165, 250, 0.18);
+	}
+
 	.home-hero-stage__status-label b {
 		font: inherit;
 	}
@@ -344,8 +330,10 @@ const statusEvent = portfolioConfig.statusEvent;
 		const element = document.querySelector<HTMLElement>("[data-hero-status]");
 		if (!element) return;
 		const label = element.querySelector<HTMLElement>("[data-hero-status-label]");
+		const image = element.querySelector<HTMLImageElement>("[data-hero-status-image]");
 		const mode = element.dataset.mode || "schedule";
-		let working = mode === "working";
+		let state: "working" | "offwork" | "resting" =
+			mode === "working" ? "working" : mode === "offwork" ? "offwork" : "resting";
 
 		if (mode === "schedule") {
 			try {
@@ -357,19 +345,32 @@ const statusEvent = portfolioConfig.statusEvent;
 				const hour = Number(parts.find((part) => part.type === "hour")?.value || 0) % 24;
 				const start = Number(element.dataset.workStart || 9);
 				const end = Number(element.dataset.workEnd || 18);
-				working = start <= end ? hour >= start && hour < end : hour >= start || hour < end;
+				const working =
+					start <= end ? hour >= start && hour < end : hour >= start || hour < end;
+				state = working ? "working" : "offwork";
 			} catch {
-				working = false;
+				state = "offwork";
 			}
 		}
 
-		if (mode === "resting") working = false;
-		element.classList.toggle("is-working", working);
-		element.classList.toggle("is-resting", !working);
+		element.classList.toggle("is-working", state === "working");
+		element.classList.toggle("is-offwork", state === "offwork");
+		element.classList.toggle("is-resting", state === "resting");
 		if (label) {
-			label.textContent = working
-				? element.dataset.workingLabel || "上班中"
-				: element.dataset.restingLabel || "休息中";
+			label.textContent =
+				state === "working"
+					? element.dataset.workingLabel || "上班中"
+					: state === "offwork"
+						? element.dataset.offworkLabel || "下班中"
+						: element.dataset.restingLabel || "休息中";
+		}
+		if (image) {
+			image.src =
+				state === "working"
+					? element.dataset.workingImage || image.src
+					: state === "offwork"
+						? element.dataset.offworkImage || image.src
+						: element.dataset.restingImage || image.src;
 		}
 	}
 
