@@ -9,6 +9,7 @@ import License from "@components/misc/License.astro";
 import I18nKey from "@i18n/i18nKey";
 import { i18n } from "@i18n/translation";
 import MainGridLayout from "@layouts/MainGridLayout.astro";
+import SidebarTOC from "@/components/widget/SidebarTOC.astro";
 import { getRelatedPosts, getSortedPosts } from "@utils/content-utils";
 import {
 	getFileDirFromPath,
@@ -142,6 +143,7 @@ const relatedPosts = await getRelatedPosts(entry, 5);
   headings={headings}
   encrypted={!!entry.data.password}
   bannerPostMeta={bannerPostMeta}
+  contentOnly={true}
 >
   <!-- KaTeX 按需加载 - 仅在文章页面 -->
   <KatexManager slot="head" />
@@ -152,6 +154,8 @@ const relatedPosts = await getRelatedPosts(entry, 5);
     type="application/ld+json"
     set:html={JSON.stringify(jsonLd)}
   />
+  <div class="post-reading-layout">
+    <article class="post-reading-main">
   <div
     class="flex w-full rounded-(--radius-large) overflow-hidden relative mb-4"
   >
@@ -547,4 +551,44 @@ const relatedPosts = await getRelatedPosts(entry, 5);
 
   <!-- 评论 -->
   {entry.data.comment && !entry.data.password && <Comment post={entry} />}
+    </article>
+    <aside class="post-reading-toc" aria-label="文章目录">
+      <div class="post-reading-toc__sticky">
+        <SidebarTOC headings={headings} encrypted={!!entry.data.password} />
+      </div>
+    </aside>
+  </div>
 </MainGridLayout>
+
+<style>
+  .post-reading-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 17.5rem;
+    gap: 1.5rem;
+    align-items: start;
+    width: 100%;
+  }
+
+  .post-reading-main {
+    min-width: 0;
+  }
+
+  .post-reading-toc {
+    min-width: 0;
+  }
+
+  .post-reading-toc__sticky {
+    position: sticky;
+    top: 1rem;
+  }
+
+  @media (max-width: 1023px) {
+    .post-reading-layout {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .post-reading-toc {
+      display: none;
+    }
+  }
+</style>

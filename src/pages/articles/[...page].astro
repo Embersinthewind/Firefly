@@ -16,7 +16,7 @@ export const getStaticPaths = (async ({ paginate }) => {
 const { page } = Astro.props;
 ---
 
-<MainGridLayout title="文章列表" description="浏览全部文章" contentOnly={true}>
+<MainGridLayout title="文章列表" description="浏览全部文章" contentOnly={true} showCategoryBar={true}>
 	<ArticleLibrary posts={page.data} total={page.total} />
 	{
 		page.total > page.size && (

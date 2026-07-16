@@ -54,6 +54,7 @@ interface Props {
 	headings?: MarkdownHeading[];
 	encrypted?: boolean;
 	contentOnly?: boolean;
+	showCategoryBar?: boolean;
 	bannerPostMeta?: {
 		title: string;
 		published: Date;
@@ -76,6 +77,7 @@ const {
 	headings = [],
 	encrypted = false,
 	contentOnly = false,
+	showCategoryBar = false,
 	bannerPostMeta,
 } = Astro.props;
 
@@ -118,8 +120,8 @@ const shouldRenderGradient =
 // 检查是否为首页
 const isHomePageCheck = isHomePage(Astro.url.pathname);
 
-// 首页专注于个人项目展示，文章分类导航只保留在内容页面。
-const shouldRenderCategoryBar = !!siteConfig.categoryBar && !isHomePageCheck;
+// 分类导航仅在明确需要的文章索引页显示，避免占用首页和阅读页空间。
+const shouldRenderCategoryBar = !!siteConfig.categoryBar && showCategoryBar;
 
 // 检查是否在文章详情页
 const isPostPage = !!postSlug;
@@ -815,6 +817,7 @@ const hasMultipleImages =
         <div id="main-grid"
           class={`transition duration-700 w-full left-0 right-0 grid ${gridCols} grid-rows-[auto_1fr_auto] lg:grid-rows-[auto] mx-auto gap-4 px-2 md:px-4 ${!sidebarConfig.mobileShowSidebar ? 'mobile-no-sidebar' : ''}`}
           data-sidebar-enable={sidebarLayoutConfig.enable ? "true" : "false"}
+          data-content-only={contentOnly ? "true" : "false"}
           data-grid-hide-sidebar-on-post={hideSidebarOnPostPage ? "true" : "false"}
           data-sidebar-position={sidebarLayoutConfig.position}
           data-tablet-sidebar={sidebarLayoutConfig.tabletSidebar ?? "left"}
@@ -859,7 +862,7 @@ const hasMultipleImages =
             )}
                     
             {/* 主内容区包装器 - 包含静态栏位和swup容器，作为单个grid item */}
-            <div class={staticBarClass}>
+            <div class={staticBarClass} data-main-content>
                 {/* 分类导航栏 - 全站渲染并显示 */}
                 {shouldRenderCategoryBar && <div id="category-bar-wrapper"><CategoryBar currentPostCategory={postCategory} /></div>}
                 {/* 主内容区 - 始终渲染，确保 Swup 容器存在 */}
@@ -934,6 +937,16 @@ const hasMultipleImages =
 </Layout>
 
 <style is:global>
+  /* 专注内容页始终占满主列，避免全局侧栏脚本在页面切换后恢复三栏宽度。 */
+  #main-grid[data-content-only="true"] {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  #main-grid[data-content-only="true"] > [data-main-content] {
+    grid-column: 1 / -1 !important;
+    width: 100%;
+  }
+
   /* 右侧栏平滑过渡 */
   #right-sidebar {
     transition: opacity 0.35s ease-in-out,

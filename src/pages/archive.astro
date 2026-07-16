@@ -9,7 +9,7 @@ import { getSortedPosts } from "@/utils/content-utils";
 const posts = await getSortedPosts();
 ---
 
-<MainGridLayout title={i18n(I18nKey.archive)}>
+<MainGridLayout title={i18n(I18nKey.archive)} contentOnly={true}>
 	<section class="archive-workspace card-base">
 		<header class="archive-workspace__header">
 			<p>Archive</p>

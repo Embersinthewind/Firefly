@@ -7,6 +7,6 @@ import { getCategoryList } from "@/utils/content-utils";
 const categories = (await getCategoryList()).map((category) => category.name);
 ---
 
-<MainGridLayout title="写文章" description="专注 Markdown 写作，支持导入导出与 K-Vault 图片自动上传">
+<MainGridLayout title="写文章" description="专注 Markdown 写作，支持导入导出与 K-Vault 图片自动上传" contentOnly={true}>
 	<ArticleWriter categories={categories} repository={siteEditorGitHubConfig} client:load />
 </MainGridLayout>

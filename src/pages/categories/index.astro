@@ -10,7 +10,7 @@ const totalPosts = categories.reduce(
 );
 ---
 
-<MainGridLayout title="分类" description={`共 ${categories.length} 个分类`}>
+<MainGridLayout title="分类" description={`共 ${categories.length} 个分类`} contentOnly={true}>
 	<section class="category-directory card-base" aria-labelledby="category-directory-title">
 		<header>
 			<p>Categories</p>
