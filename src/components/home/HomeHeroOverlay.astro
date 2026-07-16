@@ -359,10 +359,10 @@ const statusEvent = portfolioConfig.statusEvent;
 		if (label) {
 			label.textContent =
 				state === "working"
-					? element.dataset.workingLabel || "上班中"
+					? element.dataset.workingLabel || "上班"
 					: state === "offwork"
-						? element.dataset.offworkLabel || "下班中"
-						: element.dataset.restingLabel || "休息中";
+						? element.dataset.offworkLabel || "下班"
+						: element.dataset.restingLabel || "摸鱼";
 		}
 		if (image) {
 			image.src =

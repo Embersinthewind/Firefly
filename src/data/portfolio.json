@@ -172,9 +172,9 @@
 		"timezone": "Asia/Shanghai",
 		"workStart": 9,
 		"workEnd": 18,
-		"workingLabel": "上班中",
-		"offworkLabel": "下班中",
-		"restingLabel": "休息中",
+		"workingLabel": "上班",
+		"offworkLabel": "下班",
+		"restingLabel": "摸鱼",
 		"linkUrl": "/about/"
 	}
 }
