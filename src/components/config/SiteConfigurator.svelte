@@ -148,8 +148,7 @@ async function connectGitHub(redirectIfNeeded = false) {
 			authorized = false;
 			githubUser = "";
 			if (redirectIfNeeded) openAuthorLogin(window.location.pathname);
-			else
-				setStatus("游客模式：使用作者密码登录后才能编辑。", "info");
+			else setStatus("游客模式：使用作者密码登录后才能编辑。", "info");
 			return;
 		}
 
