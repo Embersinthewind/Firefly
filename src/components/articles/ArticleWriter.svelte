@@ -521,6 +521,7 @@ async function publishArticle() {
 						<span class="cover-preview__text">
 							<strong>{coverUploadState === "uploading" ? "正在上传…" : coverUploadState === "success" ? "✓ 已上传" : coverUploadState === "error" ? "上传失败" : "封面预览"}</strong>
 							<small title={coverFileName}>{coverFileName || "远程封面"}</small>
+							{#if coverUploadState === "uploading"}<span class="cover-progress" aria-hidden="true"><span></span></span>{/if}
 						</span>
 					</label>
 					<button type="button" class="cover-remove" onclick={clearCover} aria-label="移除封面" title="移除封面">×</button>
@@ -595,6 +596,9 @@ async function publishArticle() {
 	.cover-preview.is-success .cover-preview__text strong { color: color-mix(in oklch, #15803d 78%, var(--deep-text)); }
 	.cover-preview.is-error .cover-preview__text strong { color: #dc2626; }
 	.cover-preview__text small { max-width: 8rem; overflow: hidden; color: var(--content-meta); font-size: .62rem; text-overflow: ellipsis; white-space: nowrap; }
+	.cover-progress { width: 6rem; height: .2rem; margin-top: .12rem; overflow: hidden; border-radius: 999px; background: color-mix(in oklch, var(--primary) 16%, var(--line-divider)); }
+	.cover-progress > span { display: block; width: 42%; height: 100%; border-radius: inherit; background: var(--primary); animation: cover-upload-progress 1.05s ease-in-out infinite; }
+	@keyframes cover-upload-progress { from { transform: translateX(-105%); } to { transform: translateX(245%); } }
 	.cover-remove { position: absolute; top: -.4rem; right: -.4rem; width: 1.35rem; min-height: 1.35rem; padding: 0; border-color: color-mix(in oklch, #dc2626 45%, var(--line-divider)); border-radius: 999px; background: var(--card-bg); color: #dc2626; font-size: .8rem; line-height: 1; opacity: 0; transform: scale(.82); transition: opacity 160ms ease, transform 160ms ease; }
 	.cover-preview-wrap:hover .cover-remove, .cover-preview-wrap:focus-within .cover-remove { opacity: 1; transform: scale(1); }
 	.cover-upload > span { min-height: 2.35rem; white-space: nowrap; }
@@ -618,6 +622,6 @@ async function publishArticle() {
 	input:focus-visible, textarea:focus-visible, button:focus-visible, .file-action:focus-within span, .cover-upload:focus-within span, .toolbar-upload:focus-within { outline: 2px solid var(--primary); outline-offset: 2px; }
 	@media (max-width: 1100px) { .meta-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 	@media (hover: none) { .cover-remove { opacity: 1; transform: scale(1); } }
-	@media (prefers-reduced-motion: reduce) { .cover-preview, .cover-remove { transition: none; } }
+	@media (prefers-reduced-motion: reduce) { .cover-preview, .cover-remove { transition: none; } .cover-progress > span { width: 70%; animation: none; } }
 	@media (max-width: 640px) { .writer-actions { align-items: stretch; flex-direction: column; } .writer-actions__group > * { flex: 1; } .github-auth { grid-template-columns: 1fr; } .title-input { font-size: 1.65rem; } .meta-grid { grid-template-columns: 1fr 1fr; } .meta-wide { grid-column: span 2; } .cover-control, .publish-flags { grid-column: span 2; } .markdown-editor, .markdown-preview { min-height: 34rem; padding-inline: 1rem; } }
 </style>
