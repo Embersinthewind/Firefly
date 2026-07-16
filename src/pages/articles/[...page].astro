@@ -20,7 +20,7 @@ const { page } = Astro.props;
 	<ArticleLibrary posts={page.data} total={page.total} />
 	{
 		page.total > page.size && (
-			<Pagination class="mx-auto onload-animation" page={page} />
+			<Pagination class="mx-auto onload-animation" page={page} basePath="articles" />
 		)
 	}
 </MainGridLayout>

@@ -48,6 +48,15 @@ type ArticleDraft = {
 	content: string;
 };
 
+type ContentImage = {
+	key: string;
+	alt: string;
+	src: string;
+	start: number;
+	end: number;
+	width: number;
+};
+
 const {
 	categories = [],
 }: {
@@ -89,6 +98,39 @@ const normalizedTags = $derived(
 		.map((tag) => tag.trim())
 		.filter(Boolean),
 );
+
+const contentImages = $derived.by(() => {
+	const images: ContentImage[] = [];
+	const markdownPattern = /!\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)/g;
+	const htmlPattern = /<img\b[^>]*>/gi;
+	for (const match of content.matchAll(markdownPattern)) {
+		images.push({
+			key: `${match.index}-${match[2]}`,
+			alt: match[1] || "正文图片",
+			src: match[2],
+			start: match.index,
+			end: match.index + match[0].length,
+			width: 100,
+		});
+	}
+	for (const match of content.matchAll(htmlPattern)) {
+		const source = match[0].match(/\bsrc=["']([^"']+)["']/i)?.[1];
+		if (!source) continue;
+		const alt = match[0].match(/\balt=["']([^"']*)["']/i)?.[1] || "正文图片";
+		const widthValue =
+			match[0].match(/\bwidth=["']?(\d+)%?["']?/i)?.[1] ||
+			match[0].match(/\bwidth\s*:\s*(\d+)%/i)?.[1];
+		images.push({
+			key: `${match.index}-${source}`,
+			alt,
+			src: source,
+			start: match.index,
+			end: match.index + match[0].length,
+			width: Math.min(100, Math.max(30, Number(widthValue) || 100)),
+		});
+	}
+	return images.sort((left, right) => left.start - right.start);
+});
 
 const safeSlug = $derived(
 	title
@@ -220,6 +262,21 @@ function clearCover() {
 	coverPreview = "";
 	coverFileName = "";
 	coverUploadState = "idle";
+}
+
+function escapeImageAttribute(value: string) {
+	return value
+		.replace(/&/g, "&amp;")
+		.replace(/"/g, "&quot;")
+		.replace(/</g, "&lt;")
+		.replace(/>/g, "&gt;");
+}
+
+function resizeContentImage(image: ContentImage, direction: -1 | 1) {
+	const width = Math.min(100, Math.max(30, image.width + direction * 10));
+	const replacement = `<img src="${escapeImageAttribute(image.src)}" alt="${escapeImageAttribute(image.alt)}" style="width: ${width}%; height: auto;" />`;
+	content = `${content.slice(0, image.start)}${replacement}${content.slice(image.end)}`;
+	setStatus(`正文图片宽度已调整为 ${width}%。`, "success");
 }
 
 async function uploadAsset(file: File, purpose: "body" | "cover") {
@@ -523,6 +580,27 @@ async function publishArticle() {
 				{#if isUploading || statusTone !== "neutral"}<span class:status-success={statusTone === "success"} class:status-error={statusTone === "error"} class="upload-feedback" role="status">{isUploading ? "图片上传中…" : status}</span>{/if}
 			</div>
 
+			{#if editorMode === "write" && contentImages.length > 0}
+				<section class="editor-media" aria-label="正文图片实时预览">
+					<header><strong>正文图片</strong><span>实时预览 · 缩放会同步写入 Markdown</span></header>
+					<div class="editor-media__items">
+						{#each contentImages as image (image.key)}
+							<figure>
+								<div class="editor-media__canvas"><img src={image.src} alt={image.alt} style={`width: ${image.width}%`} /></div>
+								<figcaption>
+									<span title={image.alt}>{image.alt}</span>
+									<div class="image-size-controls" aria-label="调整图片大小">
+										<button type="button" onclick={() => resizeContentImage(image, -1)} disabled={image.width <= 30} aria-label="缩小图片">−</button>
+										<output>{image.width}%</output>
+										<button type="button" onclick={() => resizeContentImage(image, 1)} disabled={image.width >= 100} aria-label="放大图片">＋</button>
+									</div>
+								</figcaption>
+							</figure>
+						{/each}
+					</div>
+				</section>
+			{/if}
+
 			{#if editorMode === "write"}
 				<textarea class="markdown-editor" bind:this={textareaRef} bind:value={content} onpaste={handlePaste} ondragover={(event) => event.preventDefault()} ondrop={handleDrop} placeholder="开始写作… 支持 Markdown，也可以直接粘贴或拖入图片。"></textarea>
 			{:else}
@@ -628,6 +706,19 @@ async function publishArticle() {
 	.editor-toolbar button:hover, .toolbar-upload:hover { background: var(--btn-regular-bg); color: var(--primary); }
 	.upload-feedback { max-width: 18rem; overflow: hidden; padding-inline: .5rem; color: var(--content-meta); font-size: .66rem; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
 	.italic { font-style: italic; }
+	.editor-media { padding: .65rem 1rem .8rem; border-bottom: 1px solid var(--line-divider); background: color-mix(in oklch, var(--btn-regular-bg) 24%, var(--card-bg)); }
+	.editor-media > header { display: flex; align-items: center; justify-content: space-between; gap: .75rem; margin-bottom: .5rem; }
+	.editor-media > header strong { font-size: .7rem; }
+	.editor-media > header span { color: var(--content-meta); font-size: .62rem; }
+	.editor-media__items { display: flex; gap: .65rem; overflow-x: auto; padding: .1rem .1rem .3rem; scrollbar-width: thin; }
+	.editor-media figure { width: 14rem; flex: 0 0 auto; margin: 0; overflow: hidden; border: 1px solid var(--line-divider); border-radius: .55rem; background: var(--card-bg); }
+	.editor-media__canvas { display: flex; min-height: 8rem; align-items: center; justify-content: center; padding: .5rem; background: color-mix(in oklch, var(--btn-regular-bg) 45%, var(--card-bg)); }
+	.editor-media__canvas img { display: block; max-height: 12rem; object-fit: contain; transition: width 180ms ease; }
+	.editor-media figcaption { display: flex; align-items: center; justify-content: space-between; gap: .5rem; padding: .4rem .5rem; }
+	.editor-media figcaption > span { overflow: hidden; color: var(--content-meta); font-size: .62rem; text-overflow: ellipsis; white-space: nowrap; }
+	.image-size-controls { display: flex; align-items: center; gap: .15rem; flex: 0 0 auto; }
+	.image-size-controls button { width: 1.6rem; min-height: 1.6rem; padding: 0; border: 0; background: var(--btn-regular-bg); font-size: .78rem; }
+	.image-size-controls output { width: 2.4rem; color: var(--deep-text); font-size: .62rem; font-weight: 800; text-align: center; }
 	.markdown-editor, .markdown-preview { box-sizing: border-box; width: 100%; min-height: 42rem; padding: 1.6rem 1.75rem; border: 0; background: transparent; color: var(--deep-text); font-size: .9rem; line-height: 1.85; outline: none; }
 	.markdown-editor { resize: vertical; font-family: "JetBrains Mono", "Fira Code", Consolas, monospace; }
 	.markdown-preview { overflow: auto; }
@@ -640,6 +731,6 @@ async function publishArticle() {
 
 	@media (max-width: 960px) { .writer-workspace { grid-template-columns: 1fr; } .writer-canvas { border-right: 0; } .writer-sidebar { border-top: 1px solid var(--line-divider); } .meta-grid { display: grid; grid-template-columns: 1fr 1fr; } .meta-wide, .cover-control, .publish-flags { grid-column: 1 / -1; } }
 	@media (hover: none) { .cover-remove { opacity: 1; transform: scale(1); } }
-	@media (prefers-reduced-motion: reduce) { .cover-preview, .cover-remove { transition: none; } .cover-progress > span { width: 70%; animation: none; } }
+	@media (prefers-reduced-motion: reduce) { .cover-preview, .cover-remove, .editor-media__canvas img { transition: none; } .cover-progress > span { width: 70%; animation: none; } }
 	@media (max-width: 640px) { .writer-actions { align-items: stretch; flex-direction: column; } .writer-actions__group { width: 100%; } .writer-actions__group > * { flex: 1; } .title-input { min-height: 4.75rem; padding-inline: 1rem; font-size: 1.65rem; } .meta-grid { grid-template-columns: 1fr; } .meta-wide, .cover-control, .publish-flags { grid-column: auto; } .markdown-editor, .markdown-preview { min-height: 34rem; padding-inline: 1rem; } }
 </style>
