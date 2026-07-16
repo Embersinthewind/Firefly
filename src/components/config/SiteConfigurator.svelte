@@ -47,11 +47,16 @@ const draftStorageKey = "firefly:config:draft";
 
 function normalizePortfolio(value: PortfolioData): PortfolioData {
 	const next = clone(value);
-	if (next.statusEvent.workingLabel === "上班中") next.statusEvent.workingLabel = "上班";
-	if (!next.statusEvent.offworkLabel || next.statusEvent.offworkLabel === "下班中") {
+	if (next.statusEvent.workingLabel === "上班中")
+		next.statusEvent.workingLabel = "上班";
+	if (
+		!next.statusEvent.offworkLabel ||
+		next.statusEvent.offworkLabel === "下班中"
+	) {
 		next.statusEvent.offworkLabel = "下班";
 	}
-	if (next.statusEvent.restingLabel === "休息中") next.statusEvent.restingLabel = "摸鱼";
+	if (next.statusEvent.restingLabel === "休息中")
+		next.statusEvent.restingLabel = "摸鱼";
 	return next;
 }
 
