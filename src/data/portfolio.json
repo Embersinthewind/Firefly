@@ -6,7 +6,11 @@
 	"github": {
 		"username": "Embersinthewind",
 		"limit": 8,
-		"featured": ["K-Vault", "Firefly", "TaskPlan"],
+		"featured": [
+			"K-Vault",
+			"Firefly",
+			"TaskPlan"
+		],
 		"showForks": true,
 		"fallbackProjects": [
 			{
@@ -18,7 +22,11 @@
 				"forks": 0,
 				"updatedAt": "2026-07-14T14:42:02Z",
 				"isFork": true,
-				"topics": ["Cloudflare", "Serverless", "图床"]
+				"topics": [
+					"Cloudflare",
+					"Serverless",
+					"图床"
+				]
 			},
 			{
 				"name": "Firefly",
@@ -29,7 +37,11 @@
 				"forks": 0,
 				"updatedAt": "2026-07-14T07:51:12Z",
 				"isFork": true,
-				"topics": ["Astro", "Svelte", "博客主题"]
+				"topics": [
+					"Astro",
+					"Svelte",
+					"博客主题"
+				]
 			},
 			{
 				"name": "TaskPlan",
@@ -40,7 +52,10 @@
 				"forks": 0,
 				"updatedAt": "2026-06-03T14:17:45Z",
 				"isFork": false,
-				"topics": ["TypeScript", "任务规划"]
+				"topics": [
+					"TypeScript",
+					"任务规划"
+				]
 			},
 			{
 				"name": "user-center-front",
@@ -51,7 +66,10 @@
 				"forks": 0,
 				"updatedAt": "2023-10-04T01:46:30Z",
 				"isFork": false,
-				"topics": ["TypeScript", "前端"]
+				"topics": [
+					"TypeScript",
+					"前端"
+				]
 			},
 			{
 				"name": "user-center-backend",
@@ -62,7 +80,10 @@
 				"forks": 0,
 				"updatedAt": "2023-10-03T09:02:46Z",
 				"isFork": false,
-				"topics": ["Java", "Spring Boot"]
+				"topics": [
+					"Java",
+					"Spring Boot"
+				]
 			},
 			{
 				"name": "Ulife",
@@ -73,41 +94,68 @@
 				"forks": 0,
 				"updatedAt": "2023-10-14T03:08:21Z",
 				"isFork": false,
-				"topics": ["Java", "生活服务"]
+				"topics": [
+					"Java",
+					"生活服务"
+				]
 			}
 		],
 		"gridColumns": 2,
-		"categories": ["参与项目", "个人项目", "学习项目"],
+		"categories": [
+			"参与项目",
+			"个人项目",
+			"学习项目"
+		],
 		"projectMeta": [
 			{
 				"name": "K-Vault",
 				"category": "参与项目",
-				"tags": ["Cloudflare", "Serverless", "图床"]
+				"tags": [
+					"Cloudflare",
+					"Serverless",
+					"图床"
+				]
 			},
 			{
 				"name": "Firefly",
 				"category": "参与项目",
-				"tags": ["Astro", "Svelte", "博客主题"]
+				"tags": [
+					"Astro",
+					"Svelte",
+					"博客主题"
+				]
 			},
 			{
 				"name": "TaskPlan",
 				"category": "个人项目",
-				"tags": ["TypeScript", "任务规划"]
+				"tags": [
+					"TypeScript",
+					"任务规划"
+				]
 			},
 			{
 				"name": "user-center-front",
 				"category": "学习项目",
-				"tags": ["TypeScript", "前端"]
+				"tags": [
+					"TypeScript",
+					"前端"
+				]
 			},
 			{
 				"name": "user-center-backend",
 				"category": "学习项目",
-				"tags": ["Java", "Spring Boot"]
+				"tags": [
+					"Java",
+					"Spring Boot"
+				]
 			},
 			{
 				"name": "Ulife",
 				"category": "个人项目",
-				"tags": ["Java", "生活服务"]
+				"tags": [
+					"Java",
+					"生活服务"
+				]
 			}
 		]
 	},
