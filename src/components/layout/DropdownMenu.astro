@@ -71,6 +71,7 @@ const activityTargets =
 						target={child.external ? "_blank" : undefined}
 						isLast={index === (processedLink.children?.length || 0) - 1}
 						class="dropdown-item h-10"
+						noSwup={normalizePath(child.url) === "music/"}
 					>
 						{child.icon && <Icon is:inline name={child.icon} class="text-[1.25rem] mr-3 navbar-icon" />}
 						<span>{child.name}</span>
@@ -86,6 +87,7 @@ const activityTargets =
 			aria-label={processedLink.name} 
 			href={processedLink.external ? processedLink.url : url(processedLink.url)} 
 			target={processedLink.external ? "_blank" : null}
+			data-no-swup={normalizePath(processedLink.url) === "music/" ? "" : undefined}
 			aria-current={isActive ? "page" : undefined}
 			class="btn-plain scale-animation rounded-lg h-10 font-bold px-4 active:scale-95"
 		>

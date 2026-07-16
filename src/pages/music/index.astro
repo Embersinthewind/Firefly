@@ -1,8 +1,8 @@
 ---
-import MusicExperience from "@/components/music/MusicExperience.astro";
-import MainGridLayout from "@/layouts/MainGridLayout.astro";
+import ImmersiveMusic from "@/components/music/ImmersiveMusic.svelte";
+import MusicLayout from "@/layouts/MusicLayout.astro";
 ---
 
-<MainGridLayout title="我的音乐" description="音乐收藏与沉浸式播放" contentOnly={true}>
-	<MusicExperience />
-</MainGridLayout>
+<MusicLayout title="我的音乐" description="沉浸式 3D 音乐与歌词体验">
+	<ImmersiveMusic client:only="svelte" />
+</MusicLayout>

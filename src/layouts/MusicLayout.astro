@@ -1,0 +1,100 @@
+---
+import Navbar from "@components/layout/Navbar.astro";
+import Layout from "./Layout.astro";
+
+interface Props {
+	title?: string;
+	description?: string;
+}
+
+const { title, description } = Astro.props;
+---
+
+<Layout title={title} description={description}>
+	<div class="music-layout-shell">
+		<div id="banner-overlay-container" class="hidden"></div>
+		<div id="banner-dim-container" class="hidden"></div>
+
+		<div id="top-row" class="music-navbar-row pointer-events-none">
+			<div id="navbar-wrapper" class="pointer-events-auto">
+				<Navbar />
+			</div>
+		</div>
+
+		<main id="swup-container" class="transition-main music-swup-container">
+			<slot />
+		</main>
+
+		<div id="left-sidebar-dynamic" class="hidden transition-swup-fade"></div>
+		<div id="right-sidebar-dynamic" class="hidden transition-swup-fade"></div>
+		<div id="floating-toc-wrapper" class="hidden transition-swup-fade"></div>
+	</div>
+</Layout>
+
+<script is:inline>
+	document.querySelectorAll(".music-layout-shell a[href]").forEach((anchor) => {
+		anchor.setAttribute("data-no-swup", "");
+	});
+</script>
+
+<style is:global>
+	html:has(.music-layout-shell),
+	body:has(.music-layout-shell) {
+		width: 100%;
+		height: 100%;
+		overflow: hidden;
+		background: #050711;
+	}
+
+	.music-layout-shell {
+		position: fixed;
+		inset: 0;
+		z-index: 30;
+		isolation: isolate;
+		min-height: 100svh;
+		overflow: hidden;
+		background: #050711;
+	}
+
+	.music-navbar-row {
+		position: fixed;
+		inset: 0 0 auto;
+		z-index: 80;
+		height: 4.5rem;
+	}
+
+	.music-layout-shell #navbar {
+		color: rgb(235 243 255);
+	}
+
+	.music-layout-shell .navbar-brand-pill,
+	.music-layout-shell .navbar-menu-pill,
+	.music-layout-shell .navbar-action-pill {
+		background: rgb(7 11 22 / 38%) !important;
+		color: rgb(235 243 255) !important;
+		border-color: rgb(130 210 255 / 12%) !important;
+		box-shadow: none !important;
+		backdrop-filter: blur(14px) saturate(130%);
+	}
+
+	.music-layout-shell #navbar a,
+	.music-layout-shell #navbar button,
+	.music-layout-shell #navbar svg,
+	.music-layout-shell #navbar [class*="text-"] {
+		color: inherit !important;
+	}
+
+	.music-layout-shell .music-swup-container {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+	}
+
+	@media (max-width: 1023px) {
+		.music-layout-shell .navbar-brand-pill,
+		.music-layout-shell .navbar-action-pill {
+			background: rgb(7 11 22 / 58%) !important;
+		}
+	}
+</style>

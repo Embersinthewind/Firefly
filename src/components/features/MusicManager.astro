@@ -96,9 +96,43 @@ const managerConfigStr = JSON.stringify({
 
     // ── Audio element (persistent, attached to body) ────────
     var audio = document.createElement('audio');
+    audio.id = 'firefly-music-audio';
+    audio.dataset.fireflyMusicAudio = '';
     audio.crossOrigin = 'anonymous';
     audio.style.display = 'none';
     document.body.appendChild(audio);
+
+    // The visualizer may be mounted and unmounted by Swup many times. Keep the
+    // Web Audio graph here with the persistent player so a MediaElementSource
+    // is never created twice for the same audio element.
+    var audioContext = null;
+    var analyser = null;
+    var mediaSource = null;
+
+    function ensureAudioAnalyser() {
+        if (analyser) return analyser;
+        var AudioContextClass = window.AudioContext;
+        if (!AudioContextClass) return null;
+        try {
+            audioContext = audioContext || new AudioContextClass();
+            mediaSource = mediaSource || audioContext.createMediaElementSource(audio);
+            analyser = audioContext.createAnalyser();
+            analyser.fftSize = 1024;
+            analyser.smoothingTimeConstant = 0.78;
+            mediaSource.connect(analyser);
+            analyser.connect(audioContext.destination);
+            return analyser;
+        } catch (error) {
+            console.warn('Music analyser is unavailable, using visual fallback.', error);
+            return null;
+        }
+    }
+
+    function resumeAudioContext() {
+        var node = ensureAudioAnalyser();
+        if (!node || !audioContext || audioContext.state !== 'suspended') return Promise.resolve();
+        return audioContext.resume().catch(function () {});
+    }
 
     // ── State ────────────────────────────────────────────────
     var loadVersion = 0; // incremented on each loadTrack to discard stale play() results
@@ -439,7 +473,10 @@ const managerConfigStr = JSON.stringify({
         seek: seek,
         seekToTime: seekToTime,
         playTrackByIndex: playTrackByIndex,
-        loadTrack: loadTrack
+        loadTrack: loadTrack,
+        getAudioElement: function () { return audio; },
+        getAnalyser: ensureAudioAnalyser,
+        resumeAudioContext: resumeAudioContext
     };
 })();
 </script>

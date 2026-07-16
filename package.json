@@ -75,6 +75,7 @@
     "stylus": "^0.64.0",
     "svelte": "^5.56.4",
     "tailwindcss": "^4.3.2",
+    "three": "^0.185.1",
     "tsx": "^4.23.0",
     "typescript": "^6.0.3",
     "unist-util-visit": "^5.1.0",
