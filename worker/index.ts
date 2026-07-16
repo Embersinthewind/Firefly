@@ -230,7 +230,9 @@ async function githubError(response: Response): Promise<HttpError> {
 	};
 	const messages: Record<number, string> = {
 		401: "Cloudflare 中保存的 GitHub Token 无效或已过期。",
-		403: "GitHub Token 没有 Firefly 仓库的 Contents 读写权限。",
+		403: payload.message
+			? `GitHub 拒绝访问：${payload.message}。请确认 Fine-grained Token 已选择 Firefly 仓库，并将 Contents 设置为 Read and write。`
+			: "GitHub Token 没有 Firefly 仓库的 Contents 读写权限。",
 		404: "找不到 Firefly 仓库或目标文件。",
 		409: "远程文件已发生变化，请刷新页面后重试。",
 		422: "GitHub 拒绝了本次提交，请检查提交内容。",
@@ -401,6 +403,91 @@ async function publishArticle(request: Request, env: Env): Promise<Response> {
 	);
 }
 
+function validateKVaultBaseUrl(value: string): string {
+	let url: URL;
+	try {
+		url = new URL(value.trim());
+	} catch {
+		throw new HttpError(400, "invalid_kvault_url", "K-Vault 地址无效。");
+	}
+	const hostname = url.hostname.toLowerCase();
+	const isPrivateHost =
+		hostname === "localhost" ||
+		hostname.endsWith(".localhost") ||
+		/^127\./.test(hostname) ||
+		/^10\./.test(hostname) ||
+		/^192\.168\./.test(hostname) ||
+		/^172\.(1[6-9]|2\d|3[01])\./.test(hostname) ||
+		hostname === "0.0.0.0" ||
+		hostname === "::1";
+	if (url.protocol !== "https:" || isPrivateHost) {
+		throw new HttpError(
+			400,
+			"invalid_kvault_url",
+			"K-Vault 必须使用可公开访问的 HTTPS 地址。",
+		);
+	}
+	return url.toString().replace(/\/+$/, "");
+}
+
+async function uploadKVaultImage(request: Request): Promise<Response> {
+	const contentLength = Number(request.headers.get("Content-Length") || 0);
+	if (contentLength > 20 * 1024 * 1024) {
+		throw new HttpError(413, "image_too_large", "图片不能超过 20 MB。");
+	}
+	const form = await request.formData();
+	const file = form.get("file");
+	const token = String(form.get("token") || "").trim();
+	const baseUrl = validateKVaultBaseUrl(String(form.get("baseUrl") || ""));
+	if (!(file instanceof File) || !file.type.startsWith("image/")) {
+		throw new HttpError(400, "invalid_image", "请选择有效的图片文件。");
+	}
+	if (file.size > 20 * 1024 * 1024) {
+		throw new HttpError(413, "image_too_large", "图片不能超过 20 MB。");
+	}
+	if (!token) {
+		throw new HttpError(400, "kvault_token_missing", "K-Vault Token 未配置。");
+	}
+
+	const uploadForm = new FormData();
+	uploadForm.append("file", file, file.name || `image-${Date.now()}.png`);
+	const storage = String(form.get("storage") || "").trim();
+	const folderPath = String(form.get("folderPath") || "").trim();
+	if (storage) uploadForm.append("storage", storage);
+	if (folderPath) uploadForm.append("folderPath", folderPath);
+
+	let upstream: Response;
+	try {
+		upstream = await fetch(`${baseUrl}/api/v1/upload`, {
+			method: "POST",
+			headers: { Authorization: `Bearer ${token}` },
+			body: uploadForm,
+		});
+	} catch {
+		throw new HttpError(
+			502,
+			"kvault_unreachable",
+			"无法连接 K-Vault，请检查地址和部署状态。",
+		);
+	}
+	const payload = (await upstream.json().catch(() => ({}))) as {
+		error?: string | { message?: string };
+		message?: string;
+	};
+	if (!upstream.ok) {
+		const detail =
+			(typeof payload.error === "string"
+				? payload.error
+				: payload.error?.message) || payload.message;
+		throw new HttpError(
+			upstream.status >= 400 && upstream.status < 500 ? upstream.status : 502,
+			"kvault_upload_failed",
+			detail || `K-Vault 上传失败（HTTP ${upstream.status}）。`,
+		);
+	}
+	return json(payload);
+}
+
 function assertSameOrigin(request: Request): void {
 	if (!["POST", "PUT", "PATCH", "DELETE"].includes(request.method)) return;
 	const origin = request.headers.get("Origin");
@@ -508,6 +595,8 @@ async function handleAuthorApi(request: Request, env: Env): Promise<Response> {
 		return readRepositoryFile(env, fileMatch[1]);
 	if (fileMatch && request.method === "PUT")
 		return writeRepositoryFile(request, env, fileMatch[1]);
+	if (path === "/images" && request.method === "POST")
+		return uploadKVaultImage(request);
 	if (path === "/articles" && request.method === "POST")
 		return publishArticle(request, env);
 

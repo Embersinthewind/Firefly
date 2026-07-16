@@ -15,6 +15,7 @@ import {
 	logoutAuthor,
 	openAuthorLogin,
 	publishAuthorArticle,
+	uploadAuthorImage,
 } from "@/utils/author-api";
 
 type UploadResponse = {
@@ -61,6 +62,11 @@ let category = $state(categories[0] || "");
 let tags = $state("");
 let description = $state("");
 let cover = $state("");
+let coverPreview = $state("");
+let coverFileName = $state("");
+let coverUploadState = $state<"idle" | "uploading" | "success" | "error">(
+	"idle",
+);
 let draft = $state(false);
 let pinned = $state(false);
 let content = $state("");
@@ -200,40 +206,58 @@ function pickUploadUrl(response: UploadResponse) {
 	);
 }
 
+function imagePreview(file: File): Promise<string> {
+	return new Promise((resolve, reject) => {
+		const reader = new FileReader();
+		reader.onload = () => resolve(String(reader.result || ""));
+		reader.onerror = () => reject(new Error("无法读取图片预览。"));
+		reader.readAsDataURL(file);
+	});
+}
+
+function clearCover() {
+	cover = "";
+	coverPreview = "";
+	coverFileName = "";
+	coverUploadState = "idle";
+}
+
 async function uploadAsset(file: File, purpose: "body" | "cover") {
+	if (purpose === "cover") {
+		coverFileName = file.name || "剪贴板图片";
+		coverUploadState = "uploading";
+		try {
+			coverPreview = await imagePreview(file);
+		} catch {
+			coverPreview = "";
+		}
+	}
 	const baseUrl = normalizeBaseUrl(settings.baseUrl);
 	if (!baseUrl || !settings.token.trim()) {
+		if (purpose === "cover") coverUploadState = "error";
 		setStatus("请先到“站点设置 → 写作设置”配置 K-Vault。", "error");
 		return;
 	}
 	isUploading = true;
 	setStatus(`正在上传 ${file.name}…`);
 	try {
-		const formData = new FormData();
-		formData.append("file", file);
-		if (settings.storage.trim())
-			formData.append("storage", settings.storage.trim());
-		if (settings.folderPath.trim())
-			formData.append("folderPath", settings.folderPath.trim());
-		const response = await fetch(`${baseUrl}/api/v1/upload`, {
-			method: "POST",
-			headers: { Authorization: `Bearer ${settings.token.trim()}` },
-			body: formData,
+		const data = await uploadAuthorImage({
+			file,
+			baseUrl,
+			token: settings.token.trim(),
+			storage: settings.storage,
+			folderPath: settings.folderPath,
 		});
-		const data = (await response.json().catch(() => ({}))) as UploadResponse;
-		if (!response.ok) {
-			throw new Error(
-				data.error?.message ||
-					data.message ||
-					`上传失败：HTTP ${response.status}`,
-			);
-		}
 		const link = pickUploadUrl(data);
 		if (!link) throw new Error("上传成功，但响应中没有可用链接");
-		if (purpose === "cover") cover = link;
-		else insertAtCursor(`\n![${file.name.replace(/\.[^.]+$/, "")}](${link})\n`);
+		if (purpose === "cover") {
+			cover = link;
+			coverUploadState = "success";
+		} else
+			insertAtCursor(`\n![${file.name.replace(/\.[^.]+$/, "")}](${link})\n`);
 		setStatus(`${file.name} 已上传到 K-Vault。`, "success");
 	} catch (error) {
+		if (purpose === "cover") coverUploadState = "error";
 		setStatus(
 			error instanceof Error ? error.message : "图片上传失败。",
 			"error",
@@ -264,9 +288,26 @@ async function handlePaste(event: ClipboardEvent) {
 	const clipboardFile = Array.from(event.clipboardData?.files || []).find(
 		(entry) => entry.type.startsWith("image/"),
 	);
-	const file = item?.getAsFile() || clipboardFile;
+	let file = item?.getAsFile() || clipboardFile;
+	if (!file) {
+		const html = event.clipboardData?.getData("text/html") || "";
+		const source = new DOMParser()
+			.parseFromString(html, "text/html")
+			.querySelector("img")
+			?.getAttribute("src");
+		if (source?.startsWith("data:image/")) {
+			const response = await fetch(source);
+			const blob = await response.blob();
+			const extension =
+				blob.type.split("/")[1]?.replace("jpeg", "jpg") || "png";
+			file = new File([blob], `pasted-image-${Date.now()}.${extension}`, {
+				type: blob.type,
+			});
+		}
+	}
 	if (!file) return;
 	event.preventDefault();
+	setStatus("检测到剪贴板图片，正在上传到 K-Vault…");
 	await uploadAsset(file, "body");
 }
 
@@ -300,6 +341,9 @@ function applyDraft(article: Partial<ArticleDraft>) {
 	tags = article.tags ?? "";
 	description = article.description ?? "";
 	cover = article.cover ?? "";
+	coverPreview = "";
+	coverFileName = cover ? "已载入的封面" : "";
+	coverUploadState = cover ? "success" : "idle";
 	draft = article.draft ?? false;
 	pinned = article.pinned ?? false;
 	content = article.content ?? "";
@@ -469,9 +513,17 @@ async function publishArticle() {
 		<label>发布日期<input type="date" bind:value={published} /></label>
 		<div class="cover-control">
 			<span>封面图片</span>
-			{#if cover}<img src={cover} alt="文章封面预览" />{/if}
+			{#if coverPreview || cover}
+				<div class="cover-preview" class:is-success={coverUploadState === "success"} class:is-error={coverUploadState === "error"} aria-live="polite">
+					<img src={coverPreview || cover} alt="文章封面预览" />
+					<span class="cover-preview__text">
+						<strong>{coverUploadState === "uploading" ? "正在上传…" : coverUploadState === "success" ? "✓ 已上传" : coverUploadState === "error" ? "上传失败" : "封面预览"}</strong>
+						<small title={coverFileName}>{coverFileName || "远程封面"}</small>
+					</span>
+				</div>
+			{/if}
 			<label class="cover-upload"><input type="file" accept="image/*" onchange={handleCoverInput} disabled={isUploading} /><span>{cover ? "更换封面" : "上传封面"}</span></label>
-			{#if cover}<button type="button" class="icon-button" onclick={() => (cover = "")} aria-label="移除封面">×</button>{/if}
+			{#if coverPreview || cover}<button type="button" class="icon-button" onclick={clearCover} aria-label="移除封面">×</button>{/if}
 		</div>
 		<div class="publish-flags">
 			<label><input type="checkbox" bind:checked={draft} /><span>草稿</span></label>
@@ -490,6 +542,7 @@ async function publishArticle() {
 		<button type="button" onclick={() => prefixLine("1. ")} aria-label="有序列表">☰</button>
 		<button type="button" onclick={() => wrapSelection("[", "](https://)", "链接文字")} aria-label="链接">↗</button>
 		<label class="toolbar-upload" title="上传正文图片"><input type="file" accept="image/*" onchange={handleBodyImageInput} disabled={isUploading} /><span aria-hidden="true">▣</span><span class="sr-only">上传正文图片</span></label>
+		{#if isUploading || statusTone !== "neutral"}<span class:status-success={statusTone === "success"} class:status-error={statusTone === "error"} class="upload-feedback" role="status">{isUploading ? "图片上传中…" : status}</span>{/if}
 		<span class="toolbar-spacer"></span>
 		<button type="button" class:active={editorMode === "write"} onclick={() => (editorMode = "write")}>编辑</button>
 		<button type="button" class:active={editorMode === "preview"} onclick={() => (editorMode = "preview")}>预览</button>
@@ -525,9 +578,17 @@ async function publishArticle() {
 	.meta-wide { grid-column: span 2; }
 	.meta-grid input, .github-auth input { width: 100%; min-height: 2.35rem; padding: .48rem .6rem; border: 1px solid var(--line-divider); border-radius: .45rem; background: var(--card-bg); color: var(--deep-text); font: inherit; font-size: .73rem; outline: none; }
 	.meta-grid input::placeholder, .github-auth input::placeholder, .markdown-editor::placeholder { color: color-mix(in oklch, var(--content-meta) 55%, transparent); opacity: 1; }
-	.cover-control { display: flex; align-items: center; gap: .4rem; min-width: 0; }
+	.cover-control { display: flex; align-items: center; gap: .45rem; min-width: 0; grid-column: span 2; }
 	.cover-control > span:first-child { color: var(--content-meta); font-size: .68rem; font-weight: 800; white-space: nowrap; }
-	.cover-control img { width: 2.35rem; height: 2.35rem; object-fit: cover; border-radius: .4rem; }
+	.cover-preview { display: flex; align-items: center; gap: .5rem; min-width: 0; padding: .25rem .55rem .25rem .25rem; border: 1px solid var(--line-divider); border-radius: .5rem; background: var(--card-bg); }
+	.cover-preview.is-success { border-color: color-mix(in oklch, #15803d 55%, var(--line-divider)); }
+	.cover-preview.is-error { border-color: color-mix(in oklch, #dc2626 55%, var(--line-divider)); }
+	.cover-preview img { width: 3rem; height: 3rem; flex: 0 0 auto; object-fit: cover; border-radius: .35rem; }
+	.cover-preview__text { display: grid; gap: .1rem; min-width: 0; }
+	.cover-preview__text strong { color: var(--deep-text); font-size: .7rem; white-space: nowrap; }
+	.cover-preview.is-success .cover-preview__text strong { color: color-mix(in oklch, #15803d 78%, var(--deep-text)); }
+	.cover-preview.is-error .cover-preview__text strong { color: #dc2626; }
+	.cover-preview__text small { max-width: 8rem; overflow: hidden; color: var(--content-meta); font-size: .62rem; text-overflow: ellipsis; white-space: nowrap; }
 	.cover-upload > span { min-height: 2.35rem; white-space: nowrap; }
 	.icon-button { width: 2.1rem; min-height: 2.1rem; padding: 0; }
 	.publish-flags { display: flex; align-items: center; gap: .65rem; }
@@ -536,6 +597,7 @@ async function publishArticle() {
 	.editor-toolbar { display: flex; align-items: center; gap: .15rem; overflow-x: auto; padding: .42rem .7rem; border-bottom: 1px solid var(--line-divider); scrollbar-width: thin; }
 	.editor-toolbar button, .toolbar-upload { display: grid; place-items: center; flex: 0 0 auto; width: 2.15rem; height: 2.15rem; min-height: 0; padding: 0; border: 0; border-radius: .4rem; background: transparent; color: var(--content-meta); font-size: .7rem; font-weight: 850; cursor: pointer; }
 	.editor-toolbar button:hover, .editor-toolbar button.active, .toolbar-upload:hover { background: var(--btn-regular-bg); color: var(--primary); }
+	.upload-feedback { max-width: 20rem; overflow: hidden; padding-inline: .5rem; color: var(--content-meta); font-size: .66rem; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
 	.italic { font-style: italic; }
 	.toolbar-spacer { flex: 1; }
 	.markdown-editor, .markdown-preview { box-sizing: border-box; width: 100%; min-height: 42rem; padding: 1.35rem 1.5rem; border: 0; background: transparent; color: var(--deep-text); font-size: .9rem; line-height: 1.85; outline: none; }

@@ -17,6 +17,13 @@ export type AuthorWriteResult = {
 	sha: string;
 };
 
+export type AuthorImageUploadResult = {
+	links?: { download?: string; share?: string };
+	file?: { url?: string; name?: string };
+	error?: { message?: string };
+	message?: string;
+};
+
 export class AuthorApiError extends Error {
 	status: number;
 	code: string;
@@ -31,12 +38,15 @@ export class AuthorApiError extends Error {
 async function authorRequest<T>(path: string, init?: RequestInit): Promise<T> {
 	let response: Response;
 	try {
+		const isFormData = init?.body instanceof FormData;
 		response = await fetch(`/api/author${path}`, {
 			...init,
 			credentials: "same-origin",
 			headers: {
 				Accept: "application/json",
-				...(init?.body ? { "Content-Type": "application/json" } : {}),
+				...(init?.body && !isFormData
+					? { "Content-Type": "application/json" }
+					: {}),
 				...init?.headers,
 			},
 		});
@@ -124,5 +134,25 @@ export function publishAuthorArticle(input: {
 	return authorRequest<AuthorWriteResult>("/articles", {
 		method: "POST",
 		body: JSON.stringify(input),
+	});
+}
+
+export function uploadAuthorImage(input: {
+	file: File;
+	baseUrl: string;
+	token: string;
+	storage?: string;
+	folderPath?: string;
+}): Promise<AuthorImageUploadResult> {
+	const form = new FormData();
+	form.append("file", input.file);
+	form.append("baseUrl", input.baseUrl);
+	form.append("token", input.token);
+	if (input.storage?.trim()) form.append("storage", input.storage.trim());
+	if (input.folderPath?.trim())
+		form.append("folderPath", input.folderPath.trim());
+	return authorRequest<AuthorImageUploadResult>("/images", {
+		method: "POST",
+		body: form,
 	});
 }
