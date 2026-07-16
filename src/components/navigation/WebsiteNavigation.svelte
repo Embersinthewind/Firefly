@@ -6,22 +6,14 @@ import type {
 	NavigationGitHubConfig,
 	NavigationItem,
 } from "@/types/navigationConfig";
-
-type GitHubUser = {
-	login: string;
-	avatar_url?: string;
-};
-
-type GitHubContent = {
-	content?: string;
-	sha?: string;
-	message?: string;
-};
-
-type GitHubPutResult = {
-	content?: { sha?: string };
-	commit?: { html_url?: string };
-};
+import {
+	clearLegacyAuthorTokens,
+	getAuthorSession,
+	logoutAuthor,
+	openAuthorLogin,
+	readAuthorFile,
+	writeAuthorFile,
+} from "@/utils/author-api";
 
 type ItemDraft = {
 	categoryId: string;
@@ -31,12 +23,11 @@ type ItemDraft = {
 	icon: string;
 };
 
-let { initialData, githubConfig } = $props<{
+let { initialData } = $props<{
 	initialData: NavigationData;
 	githubConfig: NavigationGitHubConfig;
 }>();
 
-const tokenStorageKey = "firefly:navigation:github-token";
 const cloneData = (value: NavigationData): NavigationData =>
 	JSON.parse(JSON.stringify(value)) as NavigationData;
 
@@ -44,11 +35,8 @@ let navigation = $state<NavigationData>(cloneData(initialData));
 let baseline = $state<NavigationData>(cloneData(initialData));
 let selectedCategory = $state("all");
 let query = $state("");
-let tokenInput = $state("");
-let accessToken = $state("");
 let repositorySha = $state("");
-let githubUser = $state<GitHubUser | null>(null);
-let authPanelOpen = $state(false);
+let githubUser = $state("");
 let isConnecting = $state(false);
 let isSaving = $state(false);
 let isDirty = $state(false);
@@ -94,14 +82,11 @@ const filteredCategories = $derived.by(() => {
 		.filter((category) => category.items.length > 0 || !normalizedQuery);
 });
 
-const isOwner = $derived(Boolean(accessToken && githubUser));
+const isOwner = $derived(Boolean(githubUser));
 
 onMount(() => {
-	const storedToken = localStorage.getItem(tokenStorageKey);
-	if (storedToken) {
-		tokenInput = storedToken;
-		void connectGitHub(true);
-	}
+	clearLegacyAuthorTokens();
+	void connectGitHub(true);
 });
 
 function setStatus(
@@ -110,37 +95,6 @@ function setStatus(
 ): void {
 	status = message;
 	statusKind = kind;
-}
-
-function githubHeaders(token: string): HeadersInit {
-	return {
-		Accept: "application/vnd.github+json",
-		Authorization: `Bearer ${token}`,
-		"X-GitHub-Api-Version": "2022-11-28",
-	};
-}
-
-function contentEndpoint(): string {
-	const path = githubConfig.path
-		.split("/")
-		.map((segment) => encodeURIComponent(segment))
-		.join("/");
-	return `https://api.github.com/repos/${encodeURIComponent(githubConfig.owner)}/${encodeURIComponent(githubConfig.repo)}/contents/${path}`;
-}
-
-function decodeContent(content: string): string {
-	const binary = atob(content.replace(/\s/g, ""));
-	const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
-	return new TextDecoder().decode(bytes);
-}
-
-function encodeContent(content: string): string {
-	const bytes = new TextEncoder().encode(content);
-	let binary = "";
-	for (let index = 0; index < bytes.length; index += 0x8000) {
-		binary += String.fromCharCode(...bytes.subarray(index, index + 0x8000));
-	}
-	return btoa(binary);
 }
 
 function isNavigationData(value: unknown): value is NavigationData {
@@ -160,84 +114,42 @@ function isNavigationData(value: unknown): value is NavigationData {
 	);
 }
 
-async function readGitHubError(response: Response): Promise<string> {
-	const payload = (await response.json().catch(() => ({}))) as GitHubContent;
-	if (response.status === 401) return "Token 无效或已过期";
-	if (response.status === 403) return "Token 没有该仓库的 Contents 读写权限";
-	if (response.status === 404)
-		return "找不到仓库或导航数据文件，请检查 Token 的仓库访问范围";
-	if (response.status === 409) return "远程文件已更新，请重新绑定后再提交";
-	return payload.message || `GitHub 请求失败（HTTP ${response.status}）`;
-}
-
 async function connectGitHub(silent = false): Promise<void> {
-	const token = tokenInput.trim();
-	if (!token) {
-		setStatus("请输入 GitHub Token", "error");
-		return;
-	}
-
 	isConnecting = true;
-	if (!silent) setStatus("正在验证 GitHub 权限…");
+	if (!silent) setStatus("正在验证 Cloudflare 作者身份…");
 
 	try {
-		const headers = githubHeaders(token);
-		const [userResponse, contentResponse] = await Promise.all([
-			fetch("https://api.github.com/user", { headers }),
-			fetch(
-				`${contentEndpoint()}?ref=${encodeURIComponent(githubConfig.branch)}`,
-				{
-					headers,
-				},
-			),
-		]);
-
-		if (!userResponse.ok) throw new Error(await readGitHubError(userResponse));
-		if (!contentResponse.ok)
-			throw new Error(await readGitHubError(contentResponse));
-
-		const user = (await userResponse.json()) as GitHubUser;
-		const file = (await contentResponse.json()) as GitHubContent;
-		if (!file.content || !file.sha)
-			throw new Error("GitHub 返回的文件信息不完整");
-
-		const parsed = JSON.parse(decodeContent(file.content)) as unknown;
+		const session = await getAuthorSession();
+		if (!session) {
+			githubUser = "";
+			repositorySha = "";
+			if (!silent) openAuthorLogin(window.location.pathname);
+			return;
+		}
+		const file = await readAuthorFile("navigation");
+		const parsed = JSON.parse(file.content) as unknown;
 		if (!isNavigationData(parsed)) throw new Error("远程导航数据格式不正确");
 
 		navigation = cloneData(parsed);
 		baseline = cloneData(parsed);
 		repositorySha = file.sha;
-		githubUser = user;
-		accessToken = token;
-		tokenInput = "";
+		githubUser = session.email;
 		isDirty = false;
-		authPanelOpen = false;
-		localStorage.setItem(tokenStorageKey, token);
-		setStatus(`已绑定 GitHub：${user.login}，编辑功能已解锁`, "success");
+		setStatus(`作者模式已登录：${session.email}，编辑功能已解锁`, "success");
 	} catch (error) {
-		accessToken = "";
-		githubUser = null;
+		githubUser = "";
 		repositorySha = "";
-		localStorage.removeItem(tokenStorageKey);
 		setStatus(
-			error instanceof Error ? error.message : "GitHub 绑定失败",
+			error instanceof Error ? error.message : "作者代理连接失败",
 			"error",
 		);
-		authPanelOpen = true;
 	} finally {
 		isConnecting = false;
 	}
 }
 
 function disconnectGitHub(): void {
-	accessToken = "";
-	githubUser = null;
-	repositorySha = "";
-	isDirty = false;
-	editorOpen = false;
-	categoryEditorOpen = false;
-	localStorage.removeItem(tokenStorageKey);
-	setStatus("已退出编辑，当前页面恢复为游客只读模式");
+	logoutAuthor();
 }
 
 function markDirty(message = "更改尚未提交到 GitHub"): void {
@@ -438,32 +350,17 @@ function discardChanges(): void {
 }
 
 async function publishChanges(): Promise<void> {
-	if (!accessToken || !githubUser || !repositorySha || !isDirty) return;
+	if (!githubUser || !repositorySha || !isDirty) return;
 	isSaving = true;
 	setStatus("正在提交导航数据到 GitHub…");
 
 	try {
 		const content = `${JSON.stringify(navigation, null, "\t")}\n`;
-		const response = await fetch(contentEndpoint(), {
-			method: "PUT",
-			headers: {
-				...githubHeaders(accessToken),
-				"Content-Type": "application/json",
-			},
-			body: JSON.stringify({
-				message: "feat: update website navigation",
-				content: encodeContent(content),
-				sha: repositorySha,
-				branch: githubConfig.branch,
-			}),
-		});
-
-		if (!response.ok) throw new Error(await readGitHubError(response));
-		const result = (await response.json()) as GitHubPutResult;
-		repositorySha = result.content?.sha ?? repositorySha;
+		const result = await writeAuthorFile("navigation", content, repositorySha);
+		repositorySha = result.sha || repositorySha;
 		baseline = cloneData(navigation);
 		isDirty = false;
-		const commitText = result.commit?.html_url ? "，已生成新提交" : "";
+		const commitText = result.commitUrl ? "，已生成新提交" : "";
 		setStatus(`导航数据已写入 GitHub${commitText}`, "success");
 	} catch (error) {
 		setStatus(error instanceof Error ? error.message : "提交失败", "error");
@@ -501,31 +398,16 @@ function favicon(item: NavigationItem): string {
 			</div>
 		</div>
 		{#if isOwner}
-			<div class="owner-identity" title={`已绑定 ${githubUser?.login}`}>
-				{#if githubUser?.avatar_url}<img src={githubUser.avatar_url} alt="" />{/if}
-				<span>{githubUser?.login}</span>
+			<div class="owner-identity" title={`作者模式：${githubUser}`}>
+				<span>{githubUser}</span>
 			</div>
 		{:else}
-			<button class="bind-button" type="button" onclick={() => (authPanelOpen = !authPanelOpen)}>
+			<button class="bind-button" type="button" onclick={() => void connectGitHub(false)}>
 				<span aria-hidden="true">⌘</span>
-				绑定 GitHub 后编辑
+				作者登录后编辑
 			</button>
 		{/if}
 	</header>
-
-	{#if authPanelOpen && !isOwner}
-		<form class="auth-panel" onsubmit={(event) => { event.preventDefault(); void connectGitHub(); }}>
-			<div>
-				<strong>绑定 GitHub Token</strong>
-				<p>Token 需要此仓库的 Contents 读写权限，并保存在当前设备的浏览器中。</p>
-			</div>
-			<label>
-				<span class="sr-only">GitHub Token</span>
-				<input type="password" autocomplete="off" bind:value={tokenInput} placeholder="github_pat_… 或 ghp_…" />
-			</label>
-			<button type="submit" disabled={isConnecting}>{isConnecting ? "验证中…" : "验证并进入编辑"}</button>
-		</form>
-	{/if}
 
 	<div class="status-line" class:status-line--success={statusKind === "success"} class:status-line--error={statusKind === "error"} aria-live="polite">
 		<span class="status-dot" aria-hidden="true"></span>

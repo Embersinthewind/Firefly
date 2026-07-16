@@ -9,6 +9,13 @@ import {
 	writerStorageKeys,
 } from "@/config/writerConfig";
 import type { SiteEditorGitHubConfig } from "@/types/portfolioConfig";
+import {
+	clearLegacyAuthorTokens,
+	getAuthorSession,
+	logoutAuthor,
+	openAuthorLogin,
+	publishAuthorArticle,
+} from "@/utils/author-api";
 
 type UploadResponse = {
 	links?: { download?: string; share?: string };
@@ -42,7 +49,6 @@ type ArticleDraft = {
 
 const {
 	categories = [],
-	repository,
 }: {
 	categories?: string[];
 	repository: SiteEditorGitHubConfig;
@@ -68,10 +74,8 @@ let isUploading = $state(false);
 let isPublishing = $state(false);
 let previewHtml = $state("");
 let textareaRef: HTMLTextAreaElement | undefined = $state();
-let githubTokenInput = $state("");
 let githubUser = $state("");
 let githubAuthorized = $state(false);
-let authOpen = $state(false);
 
 const normalizedTags = $derived(
 	tags
@@ -125,11 +129,8 @@ onMount(() => {
 		}
 	}
 
-	const storedToken = localStorage.getItem(writerStorageKeys.githubToken);
-	if (storedToken) {
-		githubTokenInput = storedToken;
-		void connectGitHub(true);
-	}
+	clearLegacyAuthorTokens();
+	void refreshAuthorSession();
 });
 
 function setStatus(
@@ -385,130 +386,43 @@ function downloadMarkdown() {
 	URL.revokeObjectURL(href);
 }
 
-function githubHeaders(token: string) {
-	return {
-		Accept: "application/vnd.github+json",
-		Authorization: `Bearer ${token}`,
-		"X-GitHub-Api-Version": "2022-11-28",
-	};
-}
-
-function encodeBase64(value: string) {
-	const bytes = new TextEncoder().encode(value);
-	let binary = "";
-	for (let index = 0; index < bytes.length; index += 0x8000) {
-		binary += String.fromCharCode(...bytes.subarray(index, index + 0x8000));
-	}
-	return btoa(binary);
-}
-
-function contentEndpoint() {
-	const path = `${repository.postsDir}/${fileName}`
-		.split("/")
-		.map(encodeURIComponent)
-		.join("/");
-	return `https://api.github.com/repos/${encodeURIComponent(repository.owner)}/${encodeURIComponent(repository.repo)}/contents/${path}`;
-}
-
-async function connectGitHub(silent = false) {
-	const token = githubTokenInput.trim();
-	if (!token) {
-		setStatus("请输入 GitHub Token。", "error");
-		return;
-	}
-	if (!silent) setStatus("正在验证 GitHub 仓库权限…");
+async function refreshAuthorSession() {
 	try {
-		const [userResponse, repoResponse] = await Promise.all([
-			fetch("https://api.github.com/user", {
-				headers: githubHeaders(token),
-			}),
-			fetch(
-				`https://api.github.com/repos/${repository.owner}/${repository.repo}`,
-				{ headers: githubHeaders(token) },
-			),
-		]);
-		if (!userResponse.ok || !repoResponse.ok)
-			throw new Error("Token 无效或无法访问目标仓库。");
-		const user = (await userResponse.json()) as { login: string };
-		const repo = (await repoResponse.json()) as {
-			permissions?: { push?: boolean };
-		};
-		if (!repo.permissions?.push)
-			throw new Error("当前 Token 没有目标仓库的写入权限。");
-		githubUser = user.login;
-		githubAuthorized = true;
-		authOpen = false;
-		localStorage.setItem(writerStorageKeys.githubToken, token);
-		setStatus(`已绑定 GitHub：${user.login}。`, "success");
+		const session = await getAuthorSession();
+		githubAuthorized = Boolean(session);
+		githubUser = session?.email || "";
+		if (session) setStatus(`作者模式已登录：${session.email}。`, "success");
 	} catch (error) {
 		githubUser = "";
 		githubAuthorized = false;
-		localStorage.removeItem(writerStorageKeys.githubToken);
 		setStatus(
-			error instanceof Error ? error.message : "GitHub 绑定失败。",
+			error instanceof Error ? error.message : "作者代理连接失败。",
 			"error",
 		);
 	}
 }
 
-function disconnectGitHub() {
-	githubUser = "";
-	githubAuthorized = false;
-	githubTokenInput = "";
-	localStorage.removeItem(writerStorageKeys.githubToken);
-	setStatus("已退出 GitHub 发布模式。");
+function connectAuthor() {
+	openAuthorLogin(window.location.pathname);
 }
 
 async function publishArticle() {
 	if (!githubAuthorized) {
-		authOpen = true;
-		setStatus("绑定 GitHub 后才能发布文章。", "error");
+		setStatus("请先登录作者模式后再发布文章。", "error");
 		return;
 	}
 	if (!title.trim() || !content.trim()) {
 		setStatus("文章标题和正文不能为空。", "error");
 		return;
 	}
-	const token =
-		localStorage.getItem(writerStorageKeys.githubToken) ||
-		githubTokenInput.trim();
-	if (!token) return;
 	isPublishing = true;
 	setStatus(draft ? "正在提交草稿…" : "正在发布文章…");
 	try {
-		const endpoint = contentEndpoint();
-		const currentResponse = await fetch(
-			`${endpoint}?ref=${encodeURIComponent(repository.branch)}`,
-			{ headers: githubHeaders(token) },
-		);
-		let sha: string | undefined;
-		if (currentResponse.ok) {
-			const current = (await currentResponse.json()) as { sha?: string };
-			sha = current.sha;
-		} else if (currentResponse.status !== 404) {
-			throw new Error(`读取远程文章失败（${currentResponse.status}）。`);
-		}
-		const response = await fetch(endpoint, {
-			method: "PUT",
-			headers: {
-				...githubHeaders(token),
-				"Content-Type": "application/json",
-			},
-			body: JSON.stringify({
-				message: `${draft ? "chore" : "feat"}(content): ${sha ? "update" : "publish"} ${safeSlug}`,
-				content: encodeBase64(markdown),
-				sha,
-				branch: repository.branch,
-			}),
+		await publishAuthorArticle({
+			fileName,
+			content: markdown,
+			draft,
 		});
-		if (!response.ok) {
-			const payload = (await response.json().catch(() => null)) as {
-				message?: string;
-			} | null;
-			throw new Error(
-				payload?.message || `GitHub 提交失败（${response.status}）。`,
-			);
-		}
 		localStorage.removeItem(writerStorageKeys.draft);
 		setStatus(
 			draft
@@ -537,20 +451,13 @@ async function publishArticle() {
 		</div>
 		<div class="writer-actions__group">
 			{#if githubAuthorized}
-				<button type="button" class="github-state" onclick={disconnectGitHub} title="点击退出 GitHub">{githubUser}</button>
+				<button type="button" class="github-state" onclick={logoutAuthor} title="退出 Cloudflare 作者模式">{githubUser}</button>
 			{:else}
-				<button type="button" onclick={() => (authOpen = !authOpen)}>绑定 GitHub</button>
+				<button type="button" onclick={connectAuthor}>作者登录</button>
 			{/if}
 			<button type="button" class="primary" onclick={publishArticle} disabled={isPublishing}>{isPublishing ? "提交中…" : draft ? "提交草稿" : "发布文章"}</button>
 		</div>
 	</div>
-
-	{#if authOpen && !githubAuthorized}
-		<div class="github-auth">
-			<input type="password" bind:value={githubTokenInput} placeholder="GitHub Token，将保存在当前设备浏览器" autocomplete="off" />
-			<button type="button" class="primary" onclick={() => connectGitHub(false)}>验证并绑定</button>
-		</div>
-	{/if}
 
 	<input class="title-input" bind:value={title} placeholder="输入文章标题…" aria-label="文章标题" />
 

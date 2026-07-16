@@ -11,7 +11,6 @@ export type KVaultWriterSettings = {
 export const writerStorageKeys = {
 	kvault: "firefly:article-writer:kvault",
 	draft: "firefly:article-writer:draft",
-	githubToken: "firefly:config:github-token",
 } as const;
 
 export const defaultKVaultWriterSettings: KVaultWriterSettings = {

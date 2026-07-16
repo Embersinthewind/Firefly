@@ -11,6 +11,14 @@ import type {
 	SiteEditorProfileData,
 	SiteEditorSiteData,
 } from "@/types/portfolioConfig";
+import {
+	clearLegacyAuthorTokens,
+	getAuthorSession,
+	logoutAuthor,
+	openAuthorLogin,
+	readAuthorFile,
+	writeAuthorFile,
+} from "@/utils/author-api";
 
 type Tab =
 	| "site"
@@ -27,7 +35,6 @@ const {
 	initialSite,
 	initialProfile,
 	initialPortfolio,
-	repository,
 }: {
 	initialSite: SiteEditorSiteData;
 	initialProfile: SiteEditorProfileData;
@@ -36,7 +43,6 @@ const {
 } = $props();
 
 const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
-const tokenStorageKey = "firefly:config:github-token";
 const draftStorageKey = "firefly:config:draft";
 
 function formatRepositoryJson(value: unknown): string {
@@ -97,9 +103,7 @@ let baseline = $state({
 	portfolio: clone(initialPortfolio),
 });
 let activeTab = $state<Tab>("site");
-let tokenInput = $state("");
 let authorized = $state(false);
-let authOpen = $state(false);
 let githubUser = $state("");
 let busy = $state(false);
 let statusMessage = $state(
@@ -127,72 +131,32 @@ function setStatus(message: string, tone: StatusTone = "info") {
 	statusTone = tone;
 }
 
-function decodeBase64(value: string) {
-	const binary = atob(value.replace(/\n/g, ""));
-	const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
-	return new TextDecoder().decode(bytes);
-}
-
-function encodeBase64(value: string) {
-	const bytes = new TextEncoder().encode(value);
-	let binary = "";
-	for (const byte of bytes) binary += String.fromCharCode(byte);
-	return btoa(binary);
-}
-
-function apiHeaders(token: string) {
+async function readRepositoryFile(key: FileKey) {
+	const payload = await readAuthorFile(key);
 	return {
-		Accept: "application/vnd.github+json",
-		Authorization: `Bearer ${token}`,
-		"X-GitHub-Api-Version": "2022-11-28",
-	};
-}
-
-async function readRepositoryFile(key: FileKey, token: string) {
-	const path = repository.paths[key];
-	const response = await fetch(
-		`https://api.github.com/repos/${repository.owner}/${repository.repo}/contents/${path}?ref=${repository.branch}`,
-		{ headers: apiHeaders(token) },
-	);
-	if (!response.ok) throw new Error(`读取 ${path} 失败（${response.status}）`);
-	const payload = (await response.json()) as { content: string; sha: string };
-	return {
-		data: JSON.parse(decodeBase64(payload.content)) as unknown,
+		data: JSON.parse(payload.content) as unknown,
 		sha: payload.sha,
 	};
 }
 
-async function connectGitHub() {
-	const token = tokenInput.trim();
-	if (!token) {
-		setStatus("请输入 GitHub Token。", "error");
-		return;
-	}
+async function connectGitHub(redirectIfNeeded = false) {
 	busy = true;
-	setStatus("正在验证 GitHub 权限并读取仓库中的最新配置……");
+	setStatus("正在验证 Cloudflare 作者身份并读取最新配置……");
 	try {
-		const [userResponse, repoResponse] = await Promise.all([
-			fetch("https://api.github.com/user", { headers: apiHeaders(token) }),
-			fetch(
-				`https://api.github.com/repos/${repository.owner}/${repository.repo}`,
-				{
-					headers: apiHeaders(token),
-				},
-			),
-		]);
-		if (!userResponse.ok || !repoResponse.ok)
-			throw new Error("Token 无效或无法访问目标仓库。");
-		const user = (await userResponse.json()) as { login: string };
-		const repo = (await repoResponse.json()) as {
-			permissions?: { push?: boolean };
-		};
-		if (!repo.permissions?.push)
-			throw new Error("当前 Token 没有目标仓库的写入权限。");
+		const session = await getAuthorSession();
+		if (!session) {
+			authorized = false;
+			githubUser = "";
+			if (redirectIfNeeded) openAuthorLogin(window.location.pathname);
+			else
+				setStatus("游客模式：通过 Cloudflare Access 登录后才能编辑。", "info");
+			return;
+		}
 
 		const [siteFile, profileFile, portfolioFile] = await Promise.all([
-			readRepositoryFile("site", token),
-			readRepositoryFile("profile", token),
-			readRepositoryFile("portfolio", token),
+			readRepositoryFile("site"),
+			readRepositoryFile("profile"),
+			readRepositoryFile("portfolio"),
 		]);
 		site = clone(siteFile.data as SiteEditorSiteData);
 		profile = clone(profileFile.data as SiteEditorProfileData);
@@ -208,16 +172,13 @@ async function connectGitHub() {
 			portfolio: portfolioFile.sha,
 		};
 		authorized = true;
-		githubUser = user.login;
-		authOpen = false;
-		localStorage.setItem(tokenStorageKey, token);
-		setStatus(`已绑定 GitHub：${user.login}，配置编辑已解锁。`, "success");
+		githubUser = session.email;
+		setStatus(`作者模式已登录：${session.email}，配置编辑已解锁。`, "success");
 	} catch (error) {
 		authorized = false;
 		githubUser = "";
-		localStorage.removeItem(tokenStorageKey);
 		setStatus(
-			error instanceof Error ? error.message : "GitHub 绑定失败。",
+			error instanceof Error ? error.message : "作者代理连接失败。",
 			"error",
 		);
 	} finally {
@@ -226,12 +187,7 @@ async function connectGitHub() {
 }
 
 function disconnect() {
-	authorized = false;
-	githubUser = "";
-	tokenInput = "";
-	localStorage.removeItem(tokenStorageKey);
-	resetChanges();
-	setStatus("已退出编辑，页面恢复为游客只读模式。");
+	logoutAuthor();
 }
 
 function resetChanges() {
@@ -272,35 +228,13 @@ function loadDraft() {
 	}
 }
 
-async function writeRepositoryFile(
-	key: FileKey,
-	value: unknown,
-	token: string,
-) {
-	const path = repository.paths[key];
-	const response = await fetch(
-		`https://api.github.com/repos/${repository.owner}/${repository.repo}/contents/${path}`,
-		{
-			method: "PUT",
-			headers: { ...apiHeaders(token), "Content-Type": "application/json" },
-			body: JSON.stringify({
-				message: `feat: update ${key} configuration`,
-				content: encodeBase64(formatRepositoryJson(value)),
-				sha: shas[key],
-				branch: repository.branch,
-			}),
-		},
+async function writeRepositoryFile(key: FileKey, value: unknown) {
+	const payload = await writeAuthorFile(
+		key,
+		formatRepositoryJson(value),
+		shas[key],
 	);
-	if (!response.ok) {
-		const payload = (await response.json().catch(() => null)) as {
-			message?: string;
-		} | null;
-		throw new Error(
-			`提交 ${path} 失败：${payload?.message || response.status}`,
-		);
-	}
-	const payload = (await response.json()) as { content?: { sha?: string } };
-	shas[key] = payload.content?.sha || shas[key];
+	shas[key] = payload.sha || shas[key];
 }
 
 async function submitConfiguration() {
@@ -320,14 +254,12 @@ async function submitConfiguration() {
 		return;
 	}
 
-	const token = localStorage.getItem(tokenStorageKey) || tokenInput.trim();
-	if (!token) return;
 	busy = true;
 	setStatus("正在把配置提交到 GitHub……");
 	try {
-		await writeRepositoryFile("site", site, token);
-		await writeRepositoryFile("profile", profile, token);
-		await writeRepositoryFile("portfolio", portfolio, token);
+		await writeRepositoryFile("site", site);
+		await writeRepositoryFile("profile", profile);
+		await writeRepositoryFile("portfolio", portfolio);
 		baseline = {
 			site: clone(site),
 			profile: clone(profile),
@@ -416,11 +348,8 @@ onMount(() => {
 			localStorage.removeItem(writerStorageKeys.kvault);
 		}
 	}
-	const stored = localStorage.getItem(tokenStorageKey);
-	if (stored) {
-		tokenInput = stored;
-		connectGitHub();
-	}
+	clearLegacyAuthorTokens();
+	void connectGitHub(false);
 });
 </script>
 
@@ -429,7 +358,7 @@ onMount(() => {
 		<div>
 			<span>CONFIG</span>
 			<h1 id="config-title">站点配置</h1>
-			<p>在浏览器中调整安全的站点展示配置，并通过 GitHub API 提交到仓库。</p>
+			<p>在浏览器中调整站点展示配置，并通过受保护的 Cloudflare 作者代理提交。</p>
 		</div>
 		<div class="config-actions">
 			{#if authorized}
@@ -441,25 +370,12 @@ onMount(() => {
 				</button>
 				<button type="button" class="button-secondary" onclick={disconnect}>退出 {githubUser}</button>
 			{:else}
-				<button type="button" class="button-primary" onclick={() => (authOpen = !authOpen)}>
-					绑定 GitHub 后编辑
+				<button type="button" class="button-primary" onclick={() => connectGitHub(true)}>
+					作者登录后编辑
 				</button>
 			{/if}
 		</div>
 	</header>
-
-	{#if authOpen && !authorized}
-		<div class="auth-panel">
-			<div>
-				<strong>GitHub 仓库授权</strong>
-				<p>Token 通过 HTTPS 验证并保存在当前设备的浏览器中，主动退出时会清除。</p>
-			</div>
-			<input type="password" bind:value={tokenInput} placeholder="github_pat_…" autocomplete="off" />
-			<button type="button" class="button-primary" onclick={connectGitHub} disabled={busy}>
-				{busy ? "验证中…" : "验证并载入"}
-			</button>
-		</div>
-	{/if}
 
 	<div class:status-success={statusTone === "success"} class:status-error={statusTone === "error"} class="config-status" role="status">
 		{statusMessage}

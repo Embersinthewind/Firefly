@@ -7,8 +7,8 @@ import navigationData from "../data/navigation.json";
 export const navigationConfig = navigationData as NavigationData;
 
 /**
- * 网站导航的写入目标。这里只保存公开仓库信息，不保存 GitHub Token。
- * 编辑者提供的 Token 仅保留在当前浏览器会话中。
+ * 网站导航的公开仓库信息。写入操作统一通过 Cloudflare 作者代理完成，
+ * GitHub Token 仅保存在 Cloudflare Secret 中。
  */
 export const navigationGitHubConfig: NavigationGitHubConfig = {
 	owner: "Embersinthewind",
