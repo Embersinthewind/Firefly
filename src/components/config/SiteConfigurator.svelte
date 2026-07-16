@@ -149,7 +149,7 @@ async function connectGitHub(redirectIfNeeded = false) {
 			githubUser = "";
 			if (redirectIfNeeded) openAuthorLogin(window.location.pathname);
 			else
-				setStatus("游客模式：通过 Cloudflare Access 登录后才能编辑。", "info");
+				setStatus("游客模式：使用作者密码登录后才能编辑。", "info");
 			return;
 		}
 

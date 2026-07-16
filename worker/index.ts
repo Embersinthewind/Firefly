@@ -13,17 +13,9 @@ type Env = {
 	GITHUB_PORTFOLIO_PATH?: string;
 	GITHUB_NAVIGATION_PATH?: string;
 	GITHUB_POSTS_DIR?: string;
-	CF_ACCESS_TEAM_DOMAIN?: string;
-	CF_ACCESS_AUD?: string;
-	AUTHOR_EMAILS?: string;
-};
-
-type AccessClaims = {
-	aud?: string | string[];
-	email?: string;
-	exp?: number;
-	iss?: string;
-	nbf?: number;
+	AUTHOR_PASSWORD?: string;
+	AUTHOR_SESSION_SECRET?: string;
+	AUTHOR_NAME?: string;
 };
 
 type GitHubFile = {
@@ -34,7 +26,8 @@ type GitHubFile = {
 
 const apiPrefix = "/api/author";
 const githubApiVersion = "2022-11-28";
-const keyCache = new Map<string, { expiresAt: number; keys: JsonWebKey[] }>();
+const sessionCookieName = "firefly_author_session";
+const sessionDurationSeconds = 30 * 24 * 60 * 60;
 
 class HttpError extends Error {
 	status: number;
@@ -58,11 +51,13 @@ function json(data: unknown, status = 200): Response {
 	});
 }
 
-function normalizeTeamDomain(value: string): string {
-	return value
-		.trim()
-		.replace(/^https?:\/\//, "")
-		.replace(/\/+$/, "");
+function base64UrlEncode(bytes: Uint8Array): string {
+	let binary = "";
+	for (const byte of bytes) binary += String.fromCharCode(byte);
+	return btoa(binary)
+		.replace(/\+/g, "-")
+		.replace(/\//g, "_")
+		.replace(/=+$/, "");
 }
 
 function base64UrlBytes(value: string): Uint8Array {
@@ -72,126 +67,117 @@ function base64UrlBytes(value: string): Uint8Array {
 	return Uint8Array.from(binary, (character) => character.charCodeAt(0));
 }
 
-function decodeJwtPart<T>(value: string): T {
-	return JSON.parse(new TextDecoder().decode(base64UrlBytes(value))) as T;
+function authorConfig(env: Env) {
+	const password = env.AUTHOR_PASSWORD?.trim();
+	const sessionSecret = env.AUTHOR_SESSION_SECRET?.trim();
+	if (
+		!password ||
+		password.length < 16 ||
+		!sessionSecret ||
+		sessionSecret.length < 32
+	) {
+		throw new HttpError(
+			503,
+			"author_auth_not_configured",
+			"作者密码尚未在 Cloudflare 中完成配置。",
+		);
+	}
+	return {
+		password,
+		sessionSecret,
+		displayName: env.AUTHOR_NAME?.trim() || "作者",
+	};
 }
 
-async function getAccessKeys(teamDomain: string): Promise<JsonWebKey[]> {
-	const cached = keyCache.get(teamDomain);
-	if (cached && cached.expiresAt > Date.now()) return cached.keys;
+async function hmac(secret: string, value: string): Promise<Uint8Array> {
+	const key = await crypto.subtle.importKey(
+		"raw",
+		new TextEncoder().encode(secret),
+		{ name: "HMAC", hash: "SHA-256" },
+		false,
+		["sign"],
+	);
+	return new Uint8Array(
+		await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(value)),
+	);
+}
 
-	const response = await fetch(`https://${teamDomain}/cdn-cgi/access/certs`);
-	if (!response.ok) {
-		throw new HttpError(
-			503,
-			"access_keys_unavailable",
-			"暂时无法验证 Cloudflare Access 身份。",
-		);
+async function constantTimeEqual(
+	left: string,
+	right: string,
+): Promise<boolean> {
+	const [leftHash, rightHash] = await Promise.all([
+		crypto.subtle.digest("SHA-256", new TextEncoder().encode(left)),
+		crypto.subtle.digest("SHA-256", new TextEncoder().encode(right)),
+	]);
+	const leftBytes = new Uint8Array(leftHash);
+	const rightBytes = new Uint8Array(rightHash);
+	let difference = 0;
+	for (let index = 0; index < leftBytes.length; index++) {
+		difference |= leftBytes[index] ^ rightBytes[index];
 	}
-	const payload = (await response.json()) as { keys?: JsonWebKey[] };
-	if (!payload.keys?.length) {
-		throw new HttpError(
-			503,
-			"access_keys_invalid",
-			"Cloudflare Access 公钥配置无效。",
-		);
+	return difference === 0;
+}
+
+function readCookie(request: Request, name: string): string {
+	const cookies = request.headers.get("Cookie") || "";
+	for (const entry of cookies.split(";")) {
+		const [key, ...parts] = entry.trim().split("=");
+		if (key === name) return parts.join("=");
 	}
-	keyCache.set(teamDomain, {
-		expiresAt: Date.now() + 60 * 60 * 1000,
-		keys: payload.keys,
-	});
-	return payload.keys;
+	return "";
+}
+
+async function createSession(env: Env): Promise<string> {
+	const config = authorConfig(env);
+	const payload = base64UrlEncode(
+		new TextEncoder().encode(
+			JSON.stringify({
+				exp: Math.floor(Date.now() / 1000) + sessionDurationSeconds,
+			}),
+		),
+	);
+	const signature = base64UrlEncode(await hmac(config.sessionSecret, payload));
+	return `${payload}.${signature}`;
 }
 
 async function verifyAuthor(
 	request: Request,
 	env: Env,
 ): Promise<{ email: string }> {
-	const teamDomain = normalizeTeamDomain(env.CF_ACCESS_TEAM_DOMAIN || "");
-	const expectedAudience = env.CF_ACCESS_AUD?.trim();
-	const allowedEmails = (env.AUTHOR_EMAILS || "")
-		.split(",")
-		.map((email) => email.trim().toLowerCase())
-		.filter(Boolean);
-
-	if (!teamDomain || !expectedAudience || allowedEmails.length === 0) {
-		throw new HttpError(
-			503,
-			"access_not_configured",
-			"作者代理尚未完成 Cloudflare Access 配置。",
-		);
+	const config = authorConfig(env);
+	const session = readCookie(request, sessionCookieName);
+	const [payload, signature] = session.split(".");
+	if (!payload || !signature) {
+		throw new HttpError(401, "author_login_required", "请先登录作者模式。");
 	}
-
-	const assertion = request.headers.get("CF-Access-Jwt-Assertion");
-	if (!assertion) {
-		throw new HttpError(
-			401,
-			"author_login_required",
-			"请先通过 Cloudflare Access 登录作者模式。",
-		);
-	}
-	const parts = assertion.split(".");
-	if (parts.length !== 3) {
-		throw new HttpError(
-			401,
-			"invalid_access_token",
-			"Cloudflare Access 身份凭证无效。",
-		);
-	}
-
-	const header = decodeJwtPart<{ alg?: string; kid?: string }>(parts[0]);
-	const claims = decodeJwtPart<AccessClaims>(parts[1]);
-	if (header.alg !== "RS256" || !header.kid) {
-		throw new HttpError(
-			401,
-			"invalid_access_token",
-			"Cloudflare Access 身份凭证无效。",
-		);
-	}
-	const key = (await getAccessKeys(teamDomain)).find(
-		(item) => item.kid === header.kid,
+	const expectedSignature = base64UrlEncode(
+		await hmac(config.sessionSecret, payload),
 	);
-	if (!key) {
-		keyCache.delete(teamDomain);
+	if (!(await constantTimeEqual(signature, expectedSignature))) {
 		throw new HttpError(
 			401,
-			"unknown_access_key",
-			"Cloudflare Access 签名密钥已更新，请重新登录。",
+			"invalid_author_session",
+			"作者登录状态无效，请重新登录。",
 		);
 	}
-	const cryptoKey = await crypto.subtle.importKey(
-		"jwk",
-		key,
-		{ name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
-		false,
-		["verify"],
-	);
-	const validSignature = await crypto.subtle.verify(
-		"RSASSA-PKCS1-v1_5",
-		cryptoKey,
-		base64UrlBytes(parts[2]),
-		new TextEncoder().encode(`${parts[0]}.${parts[1]}`),
-	);
-	const now = Math.floor(Date.now() / 1000);
-	const audience = Array.isArray(claims.aud) ? claims.aud : [claims.aud];
-	const expectedIssuer = `https://${teamDomain}`;
-	const email = claims.email?.trim().toLowerCase() || "";
-	if (
-		!validSignature ||
-		claims.iss?.replace(/\/+$/, "") !== expectedIssuer ||
-		!audience.includes(expectedAudience) ||
-		!claims.exp ||
-		claims.exp <= now ||
-		(claims.nbf ?? 0) > now ||
-		!allowedEmails.includes(email)
-	) {
+	try {
+		const claims = JSON.parse(
+			new TextDecoder().decode(base64UrlBytes(payload)),
+		) as {
+			exp?: number;
+		};
+		if (!claims.exp || claims.exp <= Math.floor(Date.now() / 1000)) {
+			throw new Error("expired");
+		}
+	} catch {
 		throw new HttpError(
-			403,
-			"author_forbidden",
-			"当前 Cloudflare Access 账号没有作者权限。",
+			401,
+			"expired_author_session",
+			"作者登录已过期，请重新登录。",
 		);
 	}
-	return { email };
+	return { email: config.displayName };
 }
 
 function requireGitHubConfig(env: Env) {
@@ -427,20 +413,85 @@ function assertSameOrigin(request: Request): void {
 	}
 }
 
-async function handleAuthorApi(request: Request, env: Env): Promise<Response> {
+function safeReturnPath(value: string | null): string {
+	return value?.startsWith("/") && !value.startsWith("//") ? value : "/write/";
+}
+
+function escapeHtml(value: string): string {
+	return value
+		.replace(/&/g, "&amp;")
+		.replace(/</g, "&lt;")
+		.replace(/>/g, "&gt;")
+		.replace(/"/g, "&quot;");
+}
+
+function loginPage(returnTo: string, error = "", status = 200): Response {
+	const safePath = escapeHtml(returnTo);
+	const errorHtml = error ? `<p class="error">${escapeHtml(error)}</p>` : "";
+	return new Response(
+		`<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Firefly 作者登录</title><style>*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:#f4f6fb;color:#172033;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}.card{width:min(92vw,420px);padding:2rem;border:1px solid #dce2ee;border-radius:24px;background:#fff;box-shadow:0 24px 70px #25304d1a}small{color:#4f7cff;font-weight:700;letter-spacing:.14em}h1{margin:.45rem 0 .4rem;font-size:1.8rem}p{margin:.3rem 0 1.35rem;color:#697386}label{display:grid;gap:.5rem;font-weight:650}input{width:100%;min-height:48px;padding:.75rem .9rem;border:1px solid #cfd7e6;border-radius:12px;font:inherit;outline:none}input:focus{border-color:#4f7cff;box-shadow:0 0 0 3px #4f7cff22}button{width:100%;min-height:48px;margin-top:1rem;border:0;border-radius:12px;background:#274df0;color:#fff;font:inherit;font-weight:750;cursor:pointer}.error{margin:0 0 1rem;padding:.75rem;border-radius:10px;background:#fff0f0;color:#c53636;font-size:.9rem}</style></head><body><main class="card"><small>FIREFLY AUTHOR</small><h1>作者登录</h1><p>验证成功后，本设备将保持登录 30 天。</p>${errorHtml}<form method="post" action="/api/author/login"><input type="hidden" name="returnTo" value="${safePath}"><label>作者密码<input name="password" type="password" autocomplete="current-password" required autofocus></label><button type="submit">进入作者模式</button></form></main></body></html>`,
+		{
+			status,
+			headers: {
+				"Cache-Control": "no-store",
+				"Content-Type": "text/html; charset=utf-8",
+				"Content-Security-Policy":
+					"default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
+				"X-Content-Type-Options": "nosniff",
+			},
+		},
+	);
+}
+
+async function handleLogin(
+	request: Request,
+	env: Env,
+	url: URL,
+): Promise<Response> {
+	const config = authorConfig(env);
+	if (request.method === "GET") {
+		return loginPage(safeReturnPath(url.searchParams.get("returnTo")));
+	}
+	if (request.method !== "POST") {
+		throw new HttpError(405, "method_not_allowed", "登录请求方法不受支持。");
+	}
 	assertSameOrigin(request);
-	const author = await verifyAuthor(request, env);
+	const form = await request.formData();
+	const returnTo = safeReturnPath(String(form.get("returnTo") || ""));
+	const password = String(form.get("password") || "");
+	if (!(await constantTimeEqual(password, config.password))) {
+		return loginPage(returnTo, "作者密码不正确。", 401);
+	}
+	const session = await createSession(env);
+	return new Response(null, {
+		status: 303,
+		headers: {
+			Location: new URL(returnTo, url.origin).toString(),
+			"Set-Cookie": `${sessionCookieName}=${session}; Max-Age=${sessionDurationSeconds}; Path=${apiPrefix}; HttpOnly; Secure; SameSite=Strict`,
+			"Cache-Control": "no-store",
+		},
+	});
+}
+
+async function handleAuthorApi(request: Request, env: Env): Promise<Response> {
 	const url = new URL(request.url);
 	const path = url.pathname.slice(apiPrefix.length) || "/";
 
-	if (request.method === "GET" && path === "/login") {
-		const returnTo = url.searchParams.get("returnTo") || "/write/";
-		const safeReturnTo =
-			returnTo.startsWith("/") && !returnTo.startsWith("//")
-				? returnTo
-				: "/write/";
-		return Response.redirect(new URL(safeReturnTo, url.origin), 302);
+	if (path === "/login") return handleLogin(request, env, url);
+	if (request.method === "GET" && path === "/logout") {
+		const returnTo = safeReturnPath(url.searchParams.get("returnTo"));
+		return new Response(null, {
+			status: 303,
+			headers: {
+				Location: new URL(returnTo, url.origin).toString(),
+				"Set-Cookie": `${sessionCookieName}=; Max-Age=0; Path=${apiPrefix}; HttpOnly; Secure; SameSite=Strict`,
+				"Cache-Control": "no-store",
+			},
+		});
 	}
+
+	assertSameOrigin(request);
+	const author = await verifyAuthor(request, env);
 	if (request.method === "GET" && path === "/session") {
 		const config = requireGitHubConfig(env);
 		return json({

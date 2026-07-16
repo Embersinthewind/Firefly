@@ -87,7 +87,9 @@ export function openAuthorLogin(returnTo = window.location.pathname): void {
 }
 
 export function logoutAuthor(): void {
-	window.location.assign("/cdn-cgi/access/logout");
+	window.location.assign(
+		`/api/author/logout?returnTo=${encodeURIComponent(window.location.pathname)}`,
+	);
 }
 
 export function clearLegacyAuthorTokens(): void {
