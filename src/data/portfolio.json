@@ -157,7 +157,12 @@
 			"From Shattered Sky, I Free Fall",
 			"Amidst Silenced Stars, I Deep Sleep"
 		],
-		"desktopWallpaper": "",
+		"desktopWallpaper": [
+			"assets/images/DesktopWallpaper/凡人修仙传/1.avif",
+			"assets/images/DesktopWallpaper/凡人修仙传/2.avif",
+			"assets/images/DesktopWallpaper/凡人修仙传/3.avif",
+			"assets/images/DesktopWallpaper/凡人修仙传/4.avif"
+		],
 		"mobileWallpaper": ""
 	},
 	"announcement": {
