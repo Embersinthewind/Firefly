@@ -24,6 +24,24 @@ export type AuthorImageUploadResult = {
 	message?: string;
 };
 
+export type AuthorWallpaperImage = {
+	name: string;
+	path: string;
+	previewUrl: string;
+};
+
+export type AuthorWallpaperGroup = {
+	name: string;
+	path: string;
+	images: AuthorWallpaperImage[];
+};
+
+export type AuthorWallpaperUploadResult = {
+	commitUrl: string;
+	sha: string;
+	image: AuthorWallpaperImage;
+};
+
 export class AuthorApiError extends Error {
 	status: number;
 	code: string;
@@ -152,6 +170,27 @@ export function uploadAuthorImage(input: {
 	if (input.folderPath?.trim())
 		form.append("folderPath", input.folderPath.trim());
 	return authorRequest<AuthorImageUploadResult>("/images", {
+		method: "POST",
+		body: form,
+	});
+}
+
+export function listAuthorWallpapers(): Promise<{
+	groups: AuthorWallpaperGroup[];
+}> {
+	return authorRequest<{ groups: AuthorWallpaperGroup[] }>("/wallpapers");
+}
+
+export function uploadAuthorWallpaper(input: {
+	file: File;
+	group: string;
+	replacePath?: string;
+}): Promise<AuthorWallpaperUploadResult> {
+	const form = new FormData();
+	form.append("file", input.file);
+	form.append("group", input.group);
+	if (input.replacePath) form.append("replacePath", input.replacePath);
+	return authorRequest<AuthorWallpaperUploadResult>("/wallpapers", {
 		method: "POST",
 		body: form,
 	});

@@ -44,12 +44,12 @@ export const backgroundWallpaper: BackgroundWallpaperConfig = {
 		// 桌面背景图片（支持单张或多张随机）
 		// desktop: "assets/images/DesktopWallpaper/d1.avif",
 		desktop: portfolioConfig.appearance.desktopWallpaper || [
-			"assets/images/DesktopWallpaper/d1.avif",
-			"assets/images/DesktopWallpaper/d2.avif",
-			"assets/images/DesktopWallpaper/d3.avif",
-			"assets/images/DesktopWallpaper/d4.avif",
-			"assets/images/DesktopWallpaper/d5.avif",
-			"assets/images/DesktopWallpaper/d6.avif",
+			"assets/images/DesktopWallpaper/默认壁纸/d1.avif",
+			"assets/images/DesktopWallpaper/默认壁纸/d2.avif",
+			"assets/images/DesktopWallpaper/默认壁纸/d3.avif",
+			"assets/images/DesktopWallpaper/默认壁纸/d4.avif",
+			"assets/images/DesktopWallpaper/默认壁纸/d5.avif",
+			"assets/images/DesktopWallpaper/默认壁纸/d6.avif",
 		],
 		// 移动背景图片（支持单张或多张随机）
 		// mobile: "assets/images/MobileWallpaper/m1.avif",

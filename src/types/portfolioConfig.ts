@@ -29,6 +29,18 @@ export type SkillItem = {
 	icon: string;
 };
 
+export type WallpaperImage = {
+	name: string;
+	path: string;
+	previewUrl: string;
+};
+
+export type WallpaperGroup = {
+	name: string;
+	path: string;
+	images: WallpaperImage[];
+};
+
 export type SiteEditorSiteData = {
 	title: string;
 	subtitle: string;
@@ -76,7 +88,7 @@ export type PortfolioData = {
 	appearance: {
 		bannerTitle: string;
 		bannerSubtitle: string[];
-		desktopWallpaper: string;
+		desktopWallpaper: string | string[];
 		mobileWallpaper: string;
 	};
 	statusEvent: {

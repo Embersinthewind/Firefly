@@ -13,6 +13,7 @@ type Env = {
 	GITHUB_PORTFOLIO_PATH?: string;
 	GITHUB_NAVIGATION_PATH?: string;
 	GITHUB_POSTS_DIR?: string;
+	GITHUB_WALLPAPER_DIR?: string;
 	AUTHOR_PASSWORD?: string;
 	AUTHOR_SESSION_SECRET?: string;
 	AUTHOR_NAME?: string;
@@ -218,6 +219,14 @@ function decodeGitHubContent(value: string): string {
 
 function encodeGitHubContent(value: string): string {
 	const bytes = new TextEncoder().encode(value);
+	let binary = "";
+	for (let index = 0; index < bytes.length; index += 0x8000) {
+		binary += String.fromCharCode(...bytes.subarray(index, index + 0x8000));
+	}
+	return btoa(binary);
+}
+
+function encodeGitHubBytes(bytes: Uint8Array): string {
 	let binary = "";
 	for (let index = 0; index < bytes.length; index += 0x8000) {
 		binary += String.fromCharCode(...bytes.subarray(index, index + 0x8000));
@@ -499,6 +508,212 @@ async function uploadKVaultImage(request: Request): Promise<Response> {
 	return json(payload);
 }
 
+function wallpaperDirectory(env: Env): string {
+	return (
+		env.GITHUB_WALLPAPER_DIR?.trim() || "src/assets/images/DesktopWallpaper"
+	).replace(/^\/+|\/+$/g, "");
+}
+
+function wallpaperPreviewUrl(env: Env, path: string): string {
+	const config = requireGitHubConfig(env);
+	const encodedPath = path.split("/").map(encodeURIComponent).join("/");
+	return `https://raw.githubusercontent.com/${encodeURIComponent(config.owner)}/${encodeURIComponent(config.repo)}/${encodeURIComponent(config.branch)}/${encodedPath}`;
+}
+
+function isWallpaperPath(path: string): boolean {
+	return /\.(?:avif|webp|png|jpe?g)$/i.test(path);
+}
+
+async function listWallpapers(env: Env): Promise<Response> {
+	const config = requireGitHubConfig(env);
+	const directory = wallpaperDirectory(env);
+	const treeUrl = `https://api.github.com/repos/${encodeURIComponent(config.owner)}/${encodeURIComponent(config.repo)}/git/trees/${encodeURIComponent(config.branch)}?recursive=1`;
+	const response = await fetch(treeUrl, {
+		headers: githubHeaders(config.token),
+	});
+	if (!response.ok) throw await githubError(response, "读取壁纸目录");
+	const payload = (await response.json()) as {
+		tree?: Array<{ path?: string; type?: string }>;
+	};
+	const groups = new Map<
+		string,
+		Array<{ name: string; path: string; previewUrl: string }>
+	>();
+	for (const item of payload.tree || []) {
+		const path = item.path || "";
+		if (
+			item.type !== "blob" ||
+			!path.startsWith(`${directory}/`) ||
+			!isWallpaperPath(path)
+		) {
+			continue;
+		}
+		const relative = path.slice(directory.length + 1);
+		const slash = relative.lastIndexOf("/");
+		const groupPath = slash >= 0 ? relative.slice(0, slash) : "";
+		const images = groups.get(groupPath) || [];
+		images.push({
+			name: relative.slice(slash + 1),
+			path: path.replace(/^src\//, ""),
+			previewUrl: wallpaperPreviewUrl(env, path),
+		});
+		groups.set(groupPath, images);
+	}
+
+	return json({
+		groups: Array.from(groups.entries())
+			.map(([path, images]) => ({
+				name: path || "默认壁纸",
+				path,
+				images: images.sort((left, right) =>
+					left.name.localeCompare(right.name, "zh-CN", {
+						numeric: true,
+					}),
+				),
+			}))
+			.sort((left, right) => {
+				if (left.name === "默认壁纸") return -1;
+				if (right.name === "默认壁纸") return 1;
+				return left.name.localeCompare(right.name, "zh-CN", {
+					numeric: true,
+				});
+			}),
+	});
+}
+
+function normalizeWallpaperGroup(value: string): string {
+	const group = value
+		.trim()
+		.replace(/\\/g, "/")
+		.replace(/^\/+|\/+$/g, "");
+	if (!group) return "";
+	if (
+		group.length > 80 ||
+		group.split("/").some((part) => !part || part === "." || part === "..") ||
+		/[<>:"|?*]/.test(group) ||
+		Array.from(group).some((character) => character.charCodeAt(0) < 32)
+	) {
+		throw new HttpError(400, "invalid_wallpaper_group", "壁纸组名称无效。");
+	}
+	return group;
+}
+
+function safeWallpaperFileName(value: string): string {
+	const normalized = value
+		.trim()
+		.replace(/[<>:"/\\|?*]/g, "-")
+		.replace(/\s+/g, "-");
+	if (
+		Array.from(normalized).some((character) => character.charCodeAt(0) < 32)
+	) {
+		throw new HttpError(400, "invalid_wallpaper_file", "壁纸文件名无效。");
+	}
+	const extension = normalized.match(/\.(avif|webp|png|jpe?g)$/i)?.[0];
+	if (!extension || normalized.length > 120) {
+		throw new HttpError(
+			400,
+			"invalid_wallpaper_file",
+			"壁纸仅支持 AVIF、WebP、PNG 和 JPG 格式。",
+		);
+	}
+	return normalized;
+}
+
+async function uploadWallpaper(request: Request, env: Env): Promise<Response> {
+	const contentLength = Number(request.headers.get("Content-Length") || 0);
+	if (contentLength > 10 * 1024 * 1024) {
+		throw new HttpError(413, "wallpaper_too_large", "单张壁纸不能超过 10 MB。");
+	}
+	const form = await request.formData();
+	const file = form.get("file");
+	if (!(file instanceof File) || !file.type.startsWith("image/")) {
+		throw new HttpError(
+			400,
+			"invalid_wallpaper_file",
+			"请选择有效的壁纸图片。",
+		);
+	}
+	if (file.size > 10 * 1024 * 1024) {
+		throw new HttpError(413, "wallpaper_too_large", "单张壁纸不能超过 10 MB。");
+	}
+	const directory = wallpaperDirectory(env);
+	const group = normalizeWallpaperGroup(String(form.get("group") || ""));
+	const replacePath = String(form.get("replacePath") || "").trim();
+	const uploadedName = safeWallpaperFileName(
+		file.name || `wallpaper-${Date.now()}.webp`,
+	);
+	let repositoryPath = `${directory}/${group ? `${group}/` : ""}${uploadedName}`;
+
+	if (replacePath) {
+		const requestedPath = replacePath.replace(/^\/+/, "");
+		const normalizedReplacePath = requestedPath.startsWith("assets/")
+			? `src/${requestedPath}`
+			: requestedPath;
+		if (
+			!normalizedReplacePath.startsWith(`${directory}/`) ||
+			!isWallpaperPath(normalizedReplacePath)
+		) {
+			throw new HttpError(
+				400,
+				"invalid_wallpaper_path",
+				"替换的壁纸路径无效。",
+			);
+		}
+		const sourceExtension = uploadedName.split(".").pop()?.toLowerCase();
+		const targetExtension = normalizedReplacePath
+			.split(".")
+			.pop()
+			?.toLowerCase();
+		if (sourceExtension !== targetExtension) {
+			throw new HttpError(
+				400,
+				"wallpaper_format_mismatch",
+				`替换图片必须保持 ${targetExtension?.toUpperCase()} 格式。`,
+			);
+		}
+		repositoryPath = normalizedReplacePath;
+	}
+
+	const config = requireGitHubConfig(env);
+	const current = await fetch(
+		`${githubContentUrl(env, repositoryPath)}?ref=${encodeURIComponent(config.branch)}`,
+		{ headers: githubHeaders(config.token) },
+	);
+	let sha: string | undefined;
+	if (current.ok) sha = ((await current.json()) as GitHubFile).sha;
+	else if (current.status !== 404)
+		throw await githubError(current, `检查壁纸 ${repositoryPath}`);
+
+	const response = await fetch(githubContentUrl(env, repositoryPath), {
+		method: "PUT",
+		headers: {
+			...githubHeaders(config.token),
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify({
+			branch: config.branch,
+			content: encodeGitHubBytes(new Uint8Array(await file.arrayBuffer())),
+			message: `feat: ${sha ? "replace" : "add"} wallpaper ${repositoryPath.split("/").pop()}`,
+			...(sha ? { sha } : {}),
+		}),
+	});
+	if (!response.ok)
+		throw await githubError(response, `上传壁纸 ${repositoryPath}`);
+	const payload = (await response.json()) as {
+		content?: { sha?: string };
+		commit?: { html_url?: string };
+	};
+	return json({
+		commitUrl: payload.commit?.html_url || "",
+		sha: payload.content?.sha || sha || "",
+		image: {
+			name: repositoryPath.split("/").pop() || uploadedName,
+			path: repositoryPath.replace(/^src\//, ""),
+			previewUrl: wallpaperPreviewUrl(env, repositoryPath),
+		},
+	});
+}
+
 function assertSameOrigin(request: Request): void {
 	if (!["POST", "PUT", "PATCH", "DELETE"].includes(request.method)) return;
 	const origin = request.headers.get("Origin");
@@ -608,6 +823,10 @@ async function handleAuthorApi(request: Request, env: Env): Promise<Response> {
 		return writeRepositoryFile(request, env, fileMatch[1]);
 	if (path === "/images" && request.method === "POST")
 		return uploadKVaultImage(request);
+	if (path === "/wallpapers" && request.method === "GET")
+		return listWallpapers(env);
+	if (path === "/wallpapers" && request.method === "POST")
+		return uploadWallpaper(request, env);
 	if (path === "/articles" && request.method === "POST")
 		return publishArticle(request, env);
 

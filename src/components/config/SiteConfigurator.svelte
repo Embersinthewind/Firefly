@@ -10,13 +10,16 @@ import type {
 	SiteEditorGitHubConfig,
 	SiteEditorProfileData,
 	SiteEditorSiteData,
+	WallpaperGroup,
 } from "@/types/portfolioConfig";
 import {
 	clearLegacyAuthorTokens,
 	getAuthorSession,
+	listAuthorWallpapers,
 	logoutAuthor,
 	openAuthorLogin,
 	readAuthorFile,
+	uploadAuthorWallpaper,
 	writeAuthorFile,
 } from "@/utils/author-api";
 
@@ -35,10 +38,12 @@ const {
 	initialSite,
 	initialProfile,
 	initialPortfolio,
+	initialWallpaperGroups,
 }: {
 	initialSite: SiteEditorSiteData;
 	initialProfile: SiteEditorProfileData;
 	initialPortfolio: PortfolioData;
+	initialWallpaperGroups: WallpaperGroup[];
 	repository: SiteEditorGitHubConfig;
 } = $props();
 
@@ -112,6 +117,10 @@ let portfolio = $state(normalizePortfolio(initialPortfolio));
 let writerSettings = $state<KVaultWriterSettings>(
 	clone(defaultKVaultWriterSettings),
 );
+let wallpaperGroups = $state<WallpaperGroup[]>(clone(initialWallpaperGroups));
+let newWallpaperGroup = $state("");
+let wallpaperUploading = $state(false);
+let wallpaperUploadProgress = $state("");
 let baseline = $state({
 	site: clone(initialSite),
 	profile: clone(initialProfile),
@@ -167,14 +176,19 @@ async function connectGitHub(redirectIfNeeded = false) {
 			return;
 		}
 
-		const [siteFile, profileFile, portfolioFile] = await Promise.all([
-			readRepositoryFile("site"),
-			readRepositoryFile("profile"),
-			readRepositoryFile("portfolio"),
-		]);
+		const [siteFile, profileFile, portfolioFile, wallpaperFile] =
+			await Promise.all([
+				readRepositoryFile("site"),
+				readRepositoryFile("profile"),
+				readRepositoryFile("portfolio"),
+				listAuthorWallpapers().catch(() => null),
+			]);
 		site = clone(siteFile.data as SiteEditorSiteData);
 		profile = clone(profileFile.data as SiteEditorProfileData);
 		portfolio = normalizePortfolio(portfolioFile.data as PortfolioData);
+		if (wallpaperFile?.groups?.length) {
+			wallpaperGroups = clone(wallpaperFile.groups);
+		}
 		baseline = {
 			site: clone(site),
 			profile: clone(profile),
@@ -331,6 +345,140 @@ function addProjectMeta() {
 function removeProjectMeta(index: number) {
 	if (!authorized) return;
 	portfolio.github.projectMeta.splice(index, 1);
+}
+
+function useDefaultDesktopWallpapers() {
+	portfolio.appearance.desktopWallpaper = "";
+	setStatus("已选择仓库默认桌面壁纸，提交配置后生效。", "info");
+}
+
+function useWallpaperGroup(group: WallpaperGroup) {
+	if (!authorized || group.images.length === 0) return;
+	portfolio.appearance.desktopWallpaper = group.images.map(
+		(image) => image.path,
+	);
+	setStatus(
+		`已选择“${group.name}”壁纸组，共 ${group.images.length} 张。`,
+		"info",
+	);
+}
+
+function useSingleWallpaper(group: WallpaperGroup, imagePath: string) {
+	if (!authorized) return;
+	portfolio.appearance.desktopWallpaper = imagePath;
+	setStatus(`已选择“${group.name}”中的单张壁纸。`, "info");
+}
+
+function selectedDesktopWallpapers(): string[] {
+	const current = portfolio.appearance.desktopWallpaper;
+	if (!current) return [];
+	return Array.isArray(current) ? current : [current];
+}
+
+function isWallpaperGroupSelected(group: WallpaperGroup): boolean {
+	const selected = selectedDesktopWallpapers();
+	if (selected.length === 0) return group.name === "默认壁纸";
+	return (
+		selected.length === group.images.length &&
+		selected.every((path, index) => path === group.images[index]?.path)
+	);
+}
+
+function updateWallpaperGroup(
+	groupPath: string,
+	image: WallpaperGroup["images"][number],
+	replacedPath?: string,
+) {
+	let group = wallpaperGroups.find((item) => item.path === groupPath);
+	if (!group) {
+		group = {
+			name: groupPath || "默认壁纸",
+			path: groupPath,
+			images: [],
+		};
+		wallpaperGroups = [...wallpaperGroups, group].sort((left, right) => {
+			if (left.name === "默认壁纸") return -1;
+			if (right.name === "默认壁纸") return 1;
+			return left.name.localeCompare(right.name, "zh-CN", { numeric: true });
+		});
+	}
+	const replacementIndex = replacedPath
+		? group.images.findIndex((item) => item.path === replacedPath)
+		: group.images.findIndex((item) => item.path === image.path);
+	if (replacementIndex >= 0) group.images[replacementIndex] = image;
+	else group.images.push(image);
+	group.images.sort((left, right) =>
+		left.name.localeCompare(right.name, "zh-CN", { numeric: true }),
+	);
+}
+
+async function uploadWallpaperFiles(
+	files: FileList | null,
+	groupPath: string,
+	replacePath?: string,
+) {
+	if (!authorized || wallpaperUploading || !files?.length) return;
+	wallpaperUploading = true;
+	const items = Array.from(files);
+	try {
+		for (const [index, file] of items.entries()) {
+			wallpaperUploadProgress = `正在上传 ${index + 1}/${items.length}：${file.name}`;
+			const payload = await uploadAuthorWallpaper({
+				file,
+				group: groupPath,
+				replacePath,
+			});
+			updateWallpaperGroup(
+				groupPath,
+				{
+					...payload.image,
+					previewUrl: URL.createObjectURL(file),
+				},
+				replacePath,
+			);
+		}
+		setStatus(
+			`${items.length} 张壁纸已提交到 GitHub。选择单张或整组后，再点击顶部“提交配置”。`,
+			"success",
+		);
+		newWallpaperGroup = "";
+	} catch (error) {
+		setStatus(
+			error instanceof Error ? error.message : "壁纸上传失败。",
+			"error",
+		);
+	} finally {
+		wallpaperUploading = false;
+		wallpaperUploadProgress = "";
+	}
+}
+
+function handleGroupUpload(event: Event, groupPath: string) {
+	const input = event.currentTarget as HTMLInputElement;
+	void uploadWallpaperFiles(input.files, groupPath);
+	input.value = "";
+}
+
+function handleReplacement(
+	event: Event,
+	groupPath: string,
+	replacePath: string,
+) {
+	const input = event.currentTarget as HTMLInputElement;
+	void uploadWallpaperFiles(input.files, groupPath, replacePath);
+	input.value = "";
+}
+
+function handleNewGroupUpload(event: Event) {
+	const input = event.currentTarget as HTMLInputElement;
+	const group = newWallpaperGroup.trim();
+	if (!group) {
+		setStatus("请先填写新壁纸组名称。", "error");
+		input.value = "";
+		return;
+	}
+	void uploadWallpaperFiles(input.files, group);
+	input.value = "";
 }
 
 function saveWriterSettings() {
@@ -532,8 +680,68 @@ onMount(() => {
 					<label>横幅副标题<textarea rows="5" value={portfolio.appearance.bannerSubtitle.join("\n")} oninput={(event) => (portfolio.appearance.bannerSubtitle = event.currentTarget.value.split("\n").map((item) => item.trim()).filter(Boolean))}></textarea></label>
 				</div>
 				<div class="config-section">
-					<header><h2>壁纸图片</h2><p>留空时继续使用仓库内置的桌面和移动壁纸。</p></header>
-					<label>桌面壁纸 URL<input type="url" bind:value={portfolio.appearance.desktopWallpaper} placeholder="留空使用默认壁纸" /></label>
+					<header>
+						<div><h2>桌面壁纸库</h2><p>选择单张壁纸，或让同一文件夹中的图片随机轮播。</p></div>
+						<button type="button" class="button-secondary" onclick={useDefaultDesktopWallpapers}>恢复默认</button>
+					</header>
+					<div class="wallpaper-selection-summary">
+						<span>当前选择</span>
+						<strong>
+							{selectedDesktopWallpapers().length === 0
+								? "仓库默认壁纸"
+								: selectedDesktopWallpapers().length === 1
+									? "单张壁纸"
+									: `${selectedDesktopWallpapers().length} 张轮播壁纸`}
+						</strong>
+					</div>
+
+					<div class="wallpaper-groups">
+						{#each wallpaperGroups as group}
+							<details class:wallpaper-group-selected={isWallpaperGroupSelected(group)} class="wallpaper-group" open={isWallpaperGroupSelected(group)}>
+								<summary>
+									<div><strong>{group.name}</strong><span>{group.images.length} 张图片</span></div>
+									<span aria-hidden="true">⌄</span>
+								</summary>
+								<div class="wallpaper-group-actions">
+									<button type="button" class="button-primary" onclick={() => useWallpaperGroup(group)} disabled={group.images.length === 0 || wallpaperUploading}>使用整组</button>
+									<label class="wallpaper-upload-button button-secondary">
+										添加图片
+										<input type="file" accept="image/avif,image/webp,image/png,image/jpeg" multiple onchange={(event) => handleGroupUpload(event, group.path)} />
+									</label>
+								</div>
+								<div class="wallpaper-grid">
+									{#each group.images as image}
+										<article class:active={selectedDesktopWallpapers().length === 1 && selectedDesktopWallpapers()[0] === image.path} class="wallpaper-item">
+											<button type="button" class="wallpaper-preview" onclick={() => useSingleWallpaper(group, image.path)} aria-label={`使用壁纸 ${image.name}`}>
+												<img src={image.previewUrl} alt={image.name} loading="lazy" />
+												<span>使用此图</span>
+											</button>
+											<div class="wallpaper-item-meta">
+												<strong title={image.name}>{image.name}</strong>
+												<label class="wallpaper-replace">
+													替换
+													<input type="file" accept={`.${image.name.split(".").pop()}`} onchange={(event) => handleReplacement(event, group.path, image.path)} />
+												</label>
+											</div>
+										</article>
+									{/each}
+								</div>
+							</details>
+						{/each}
+					</div>
+
+					<div class="wallpaper-new-group">
+						<div><strong>新建壁纸组</strong><span>输入文件夹名称，并选择一张或多张图片。</span></div>
+						<input bind:value={newWallpaperGroup} placeholder="例如：凡人修仙传" aria-label="新壁纸组名称" />
+						<label class="wallpaper-upload-button button-primary">
+							选择并上传
+							<input type="file" accept="image/avif,image/webp,image/png,image/jpeg" multiple onchange={handleNewGroupUpload} />
+						</label>
+					</div>
+					{#if wallpaperUploading}
+						<div class="wallpaper-upload-progress" role="status"><i></i><span>{wallpaperUploadProgress}</span></div>
+					{/if}
+					<label>自定义桌面壁纸 URL<input type="url" value={typeof portfolio.appearance.desktopWallpaper === "string" && /^https?:\/\//.test(portfolio.appearance.desktopWallpaper) ? portfolio.appearance.desktopWallpaper : ""} oninput={(event) => (portfolio.appearance.desktopWallpaper = event.currentTarget.value)} placeholder="https://example.com/wallpaper.webp" /></label>
 					<label>移动壁纸 URL<input type="url" bind:value={portfolio.appearance.mobileWallpaper} placeholder="留空使用默认壁纸" /></label>
 				</div>
 			{:else if activeTab === "sidebar"}
@@ -612,6 +820,43 @@ onMount(() => {
 	.skill-row { grid-template-columns: 1fr 1.5fr auto; }
 	.project-rule { grid-template-columns: .9fr .8fr 1.25fr auto; }
 	.danger { border: 1px solid color-mix(in oklch, #dc2626 38%, transparent); background: transparent; color: #dc2626; }
+	.wallpaper-selection-summary { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .75rem .9rem; margin-bottom: .8rem; border-radius: .55rem; background: var(--btn-regular-bg); color: var(--content-meta); font-size: .72rem; }
+	.wallpaper-selection-summary strong { color: var(--deep-text); font-size: .78rem; }
+	.wallpaper-groups { display: grid; gap: .65rem; }
+	.wallpaper-group { overflow: hidden; border: 1px solid var(--line-divider); border-radius: .65rem; background: var(--card-bg); }
+	.wallpaper-group.wallpaper-group-selected { border-color: var(--primary); }
+	.wallpaper-group summary { display: flex; align-items: center; justify-content: space-between; gap: 1rem; min-height: 3.25rem; padding: .7rem .9rem; cursor: pointer; list-style: none; }
+	.wallpaper-group summary::-webkit-details-marker { display: none; }
+	.wallpaper-group summary > div { display: flex; align-items: baseline; gap: .55rem; }
+	.wallpaper-group summary strong { color: var(--deep-text); font-size: .82rem; }
+	.wallpaper-group summary span { color: var(--content-meta); font-size: .66rem; }
+	.wallpaper-group[open] summary { border-bottom: 1px solid var(--line-divider); }
+	.wallpaper-group[open] summary > span { transform: rotate(180deg); }
+	.wallpaper-group-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .45rem; padding: .7rem .8rem 0; }
+	.wallpaper-upload-button { display: inline-flex !important; min-height: 2.35rem; align-items: center; justify-content: center; padding: .48rem .8rem; margin: 0 !important; border-radius: .5rem; font-size: .76rem !important; font-weight: 800 !important; cursor: pointer; }
+	.wallpaper-upload-button input, .wallpaper-replace input { position: absolute; width: 1px; height: 1px; min-height: 0; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
+	.wallpaper-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: .7rem; padding: .8rem; }
+	.wallpaper-item { min-width: 0; overflow: hidden; border: 1px solid var(--line-divider); border-radius: .55rem; background: var(--btn-regular-bg); }
+	.wallpaper-item.active { border-color: var(--primary); }
+	.wallpaper-preview { position: relative; display: block; width: 100%; height: 7rem; padding: 0; overflow: hidden; border-radius: 0; background: var(--btn-regular-bg); }
+	.wallpaper-preview img { width: 100%; height: 100%; object-fit: cover; transition: transform 240ms cubic-bezier(.22, 1, .36, 1); }
+	.wallpaper-preview span { position: absolute; inset: auto .5rem .5rem auto; padding: .28rem .45rem; border-radius: .35rem; background: color-mix(in oklch, var(--deep-text) 82%, transparent); color: var(--card-bg); font-size: .62rem; opacity: 0; transform: translateY(.25rem); transition: opacity 180ms ease-out, transform 180ms ease-out; }
+	.wallpaper-preview:hover img { transform: scale(1.035); }
+	.wallpaper-preview:hover span, .wallpaper-preview:focus-visible span { opacity: 1; transform: translateY(0); }
+	.wallpaper-item-meta { display: flex; align-items: center; justify-content: space-between; gap: .5rem; padding: .55rem .65rem; }
+	.wallpaper-item-meta strong { min-width: 0; overflow: hidden; color: var(--deep-text); font-size: .68rem; text-overflow: ellipsis; white-space: nowrap; }
+	.wallpaper-replace { display: inline-flex !important; margin: 0 !important; color: var(--primary) !important; font-size: .65rem !important; cursor: pointer; }
+	.wallpaper-new-group { display: grid; grid-template-columns: minmax(12rem, 1fr) minmax(12rem, 1fr) auto; align-items: center; gap: .8rem; padding: .9rem; margin-top: .8rem; border-radius: .6rem; background: var(--btn-regular-bg); }
+	.wallpaper-new-group > div { display: grid; gap: .15rem; }
+	.wallpaper-new-group strong { font-size: .78rem; }
+	.wallpaper-new-group span { color: var(--content-meta); font-size: .66rem; }
+	.wallpaper-new-group input { background: var(--card-bg); }
+	.wallpaper-upload-progress { display: grid; grid-template-columns: minmax(5rem, 9rem) 1fr; align-items: center; gap: .7rem; padding: .65rem .9rem; margin-top: .65rem; border-radius: .5rem; background: color-mix(in oklch, var(--primary) 9%, var(--card-bg)); color: var(--content-meta); font-size: .7rem; }
+	.wallpaper-upload-progress i { position: relative; display: block; height: .3rem; overflow: hidden; border-radius: 999px; background: color-mix(in oklch, var(--primary) 20%, var(--line-divider)); }
+	.wallpaper-upload-progress i::after { position: absolute; inset: 0 auto 0 0; width: 42%; border-radius: inherit; background: var(--primary); content: ""; animation: wallpaper-upload 1.1s ease-in-out infinite alternate; }
+	@keyframes wallpaper-upload { to { width: 100%; } }
 	@media (max-width: 900px) { .config-hero { align-items: flex-start; flex-direction: column; } .config-actions { justify-content: flex-start; } .auth-panel, .form-grid.three { grid-template-columns: 1fr; } }
-	@media (max-width: 640px) { .form-grid.two, .toggle-grid, .profile-link, .skill-row, .project-rule { grid-template-columns: 1fr; } .config-section > header { flex-direction: column; } }
+	@media (max-width: 900px) { .wallpaper-new-group { grid-template-columns: 1fr 1fr; } .wallpaper-new-group > div { grid-column: 1 / -1; } }
+	@media (max-width: 640px) { .form-grid.two, .toggle-grid, .profile-link, .skill-row, .project-rule, .wallpaper-new-group { grid-template-columns: 1fr; } .config-section > header { flex-direction: column; } .wallpaper-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+	@media (prefers-reduced-motion: reduce) { .wallpaper-preview img, .wallpaper-preview span { transition: none; } .wallpaper-upload-progress i::after { animation: none; width: 100%; } }
 </style>

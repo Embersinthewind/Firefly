@@ -78,6 +78,7 @@ pnpm build
 - `GITHUB_PORTFOLIO_PATH`
 - `GITHUB_NAVIGATION_PATH`
 - `GITHUB_POSTS_DIR`
+- `GITHUB_WALLPAPER_DIR`（默认 `src/assets/images/DesktopWallpaper`）
 
 若复制本仓库建立自己的站点，请把其中的仓库所有者、仓库名称和文件路径改成自己的值。
 
@@ -105,6 +106,12 @@ pnpm build
 保存变量后重新部署 Worker。作者成功登录后，浏览器会获得一个有效期 30 天的 `HttpOnly` 签名 Cookie；GitHub Token 不会发送到浏览器。
 
 更完整的安全说明见 [Cloudflare 作者代理配置](./cloudflare-author-proxy.md)。
+
+### 壁纸组管理
+
+“站点配置 → 背景壁纸”会把 `GITHUB_WALLPAPER_DIR` 下的每个子文件夹识别为一个壁纸组。作者登录后可以创建并命名新组、批量上传 AVIF/WebP/PNG/JPG、向现有组添加图片，或保持原扩展名替换某一张图片。选择单张或整组后仍需点击页面顶部“提交配置”，Cloudflare 完成下一次构建后生效。
+
+仓库自带的 6 张壁纸位于 `默认壁纸` 文件夹。建议优先上传 AVIF 或 WebP，单张文件不能超过 10 MB。
 
 ## 4. GitHub Token 权限
 

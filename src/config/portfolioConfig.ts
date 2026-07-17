@@ -47,7 +47,7 @@ const portfolioSchema = z.object({
 	appearance: z.object({
 		bannerTitle: z.string(),
 		bannerSubtitle: z.array(z.string()),
-		desktopWallpaper: z.string(),
+		desktopWallpaper: z.union([z.string(), z.array(z.string())]),
 		mobileWallpaper: z.string(),
 	}),
 	statusEvent: z.object({

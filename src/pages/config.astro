@@ -5,10 +5,49 @@ import MainGridLayout from "@/layouts/MainGridLayout.astro";
 import type {
 	PortfolioData,
 	SiteEditorSiteData,
+	WallpaperGroup,
 } from "@/types/portfolioConfig";
 import portfolioData from "../data/portfolio.json";
 import profileData from "../data/profile.json";
 import siteData from "../data/site.json";
+
+const wallpaperModules = import.meta.glob<string>(
+	"../assets/images/DesktopWallpaper/**/*.{avif,webp,png,jpg,jpeg}",
+	{ eager: true, query: "?url", import: "default" },
+);
+const wallpaperGroupMap = new Map<string, WallpaperGroup>();
+for (const [modulePath, previewUrl] of Object.entries(wallpaperModules)) {
+	const relativePath = modulePath.replace(
+		"../assets/images/DesktopWallpaper/",
+		"",
+	);
+	const lastSlash = relativePath.lastIndexOf("/");
+	const groupPath = lastSlash >= 0 ? relativePath.slice(0, lastSlash) : "";
+	const name = relativePath.slice(lastSlash + 1);
+	const group = wallpaperGroupMap.get(groupPath) || {
+		name: groupPath || "默认壁纸",
+		path: groupPath,
+		images: [],
+	};
+	group.images.push({
+		name,
+		path: `assets/images/DesktopWallpaper/${relativePath}`,
+		previewUrl,
+	});
+	wallpaperGroupMap.set(groupPath, group);
+}
+const initialWallpaperGroups = Array.from(wallpaperGroupMap.values())
+	.map((group) => ({
+		...group,
+		images: group.images.sort((left, right) =>
+			left.name.localeCompare(right.name, "zh-CN", { numeric: true }),
+		),
+	}))
+	.sort((left, right) => {
+		if (left.name === "默认壁纸") return -1;
+		if (right.name === "默认壁纸") return 1;
+		return left.name.localeCompare(right.name, "zh-CN", { numeric: true });
+	});
 ---
 
 <MainGridLayout title="站点配置" description="通过 GitHub 权限保护的可视化站点配置页面">
@@ -16,6 +55,7 @@ import siteData from "../data/site.json";
 		initialSite={siteData as SiteEditorSiteData}
 		initialProfile={profileData}
 		initialPortfolio={portfolioData as PortfolioData}
+		{initialWallpaperGroups}
 		repository={siteEditorGitHubConfig}
 		client:load
 	/>
