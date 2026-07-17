@@ -14,6 +14,7 @@ import type {
 } from "@/types/portfolioConfig";
 import {
 	clearLegacyAuthorTokens,
+	deleteAuthorWallpaper,
 	getAuthorSession,
 	listAuthorWallpapers,
 	logoutAuthor,
@@ -119,14 +120,17 @@ let portfolio = $state(normalizePortfolio(initialPortfolio));
 let writerSettings = $state<KVaultWriterSettings>(
 	clone(defaultKVaultWriterSettings),
 );
-let wallpaperGroups = $state<WallpaperGroup[]>(clone(initialWallpaperGroups));
+let wallpaperGroups = $state<WallpaperGroup[]>(
+	orderWallpaperGroups(clone(initialWallpaperGroups), "desktop"),
+);
 let mobileWallpaperGroups = $state<WallpaperGroup[]>(
-	clone(initialMobileWallpaperGroups),
+	orderWallpaperGroups(clone(initialMobileWallpaperGroups), "mobile"),
 );
 let wallpaperTarget = $state<"desktop" | "mobile">("desktop");
 let newWallpaperGroup = $state("");
 let wallpaperUploading = $state(false);
 let wallpaperUploadProgress = $state("");
+let draggedWallpaperPath = $state("");
 let baseline = $state({
 	site: clone(initialSite),
 	profile: clone(initialProfile),
@@ -199,10 +203,16 @@ async function connectGitHub(redirectIfNeeded = false) {
 		profile = clone(profileFile.data as SiteEditorProfileData);
 		portfolio = normalizePortfolio(portfolioFile.data as PortfolioData);
 		if (wallpaperFile?.groups?.length) {
-			wallpaperGroups = clone(wallpaperFile.groups);
+			wallpaperGroups = orderWallpaperGroups(
+				clone(wallpaperFile.groups),
+				"desktop",
+			);
 		}
 		if (mobileWallpaperFile?.groups?.length) {
-			mobileWallpaperGroups = clone(mobileWallpaperFile.groups);
+			mobileWallpaperGroups = orderWallpaperGroups(
+				clone(mobileWallpaperFile.groups),
+				"mobile",
+			);
 		}
 		baseline = {
 			site: clone(site),
@@ -360,6 +370,33 @@ function addProjectMeta() {
 function removeProjectMeta(index: number) {
 	if (!authorized) return;
 	portfolio.github.projectMeta.splice(index, 1);
+}
+
+function orderWallpaperGroups(
+	groups: WallpaperGroup[],
+	target: "desktop" | "mobile",
+): WallpaperGroup[] {
+	const configured =
+		target === "mobile"
+			? portfolio.appearance.mobileWallpaper
+			: portfolio.appearance.desktopWallpaper;
+	if (!Array.isArray(configured)) return groups;
+	const order = new Map(configured.map((path, index) => [path, index]));
+	return groups.map((group) => {
+		if (
+			group.images.length !== configured.length ||
+			!group.images.every((image) => order.has(image.path))
+		) {
+			return group;
+		}
+		return {
+			...group,
+			images: [...group.images].sort(
+				(left, right) =>
+					(order.get(left.path) ?? 0) - (order.get(right.path) ?? 0),
+			),
+		};
+	});
 }
 
 function wallpaperGroupsFor(target = wallpaperTarget): WallpaperGroup[] {
@@ -524,6 +561,82 @@ function handleNewGroupUpload(event: Event) {
 	}
 	void uploadWallpaperFiles(input.files, group);
 	input.value = "";
+}
+
+function reorderWallpaper(
+	group: WallpaperGroup,
+	sourcePath: string,
+	targetPath: string,
+) {
+	if (!authorized || sourcePath === targetPath) return;
+	const sourceIndex = group.images.findIndex(
+		(image) => image.path === sourcePath,
+	);
+	const targetIndex = group.images.findIndex(
+		(image) => image.path === targetPath,
+	);
+	if (sourceIndex < 0 || targetIndex < 0) return;
+	const [moved] = group.images.splice(sourceIndex, 1);
+	group.images.splice(targetIndex, 0, moved);
+	const selected = selectedWallpapers();
+	if (
+		Array.isArray(wallpaperValue()) &&
+		selected.length === group.images.length &&
+		selected.every((path) => group.images.some((image) => image.path === path))
+	) {
+		setWallpaperValue(group.images.map((image) => image.path));
+	}
+	setStatus("壁纸轮播顺序已调整，提交配置后生效。", "info");
+}
+
+function handleWallpaperDragStart(event: DragEvent, imagePath: string) {
+	draggedWallpaperPath = imagePath;
+	event.dataTransfer?.setData("text/plain", imagePath);
+	if (event.dataTransfer) event.dataTransfer.effectAllowed = "move";
+}
+
+function handleWallpaperDrop(
+	event: DragEvent,
+	group: WallpaperGroup,
+	targetPath: string,
+) {
+	event.preventDefault();
+	const sourcePath =
+		event.dataTransfer?.getData("text/plain") || draggedWallpaperPath;
+	reorderWallpaper(group, sourcePath, targetPath);
+	draggedWallpaperPath = "";
+}
+
+async function deleteWallpaper(group: WallpaperGroup, imagePath: string) {
+	if (!authorized || wallpaperUploading) return;
+	const image = group.images.find((item) => item.path === imagePath);
+	if (!image) return;
+	if (!window.confirm(`确定删除壁纸“${image.name}”吗？此操作会提交到 GitHub。`))
+		return;
+	const target = wallpaperTarget;
+	wallpaperUploading = true;
+	wallpaperUploadProgress = `正在删除：${image.name}`;
+	try {
+		await deleteAuthorWallpaper({ path: imagePath, target });
+		group.images = group.images.filter((item) => item.path !== imagePath);
+		const selected = selectedWallpapers();
+		if (selected.includes(imagePath)) {
+			const remaining = selected.filter((path) => path !== imagePath);
+			setWallpaperValue(remaining.length > 0 ? remaining : "", target);
+		}
+		setStatus(
+			`壁纸“${image.name}”已从 GitHub 删除，Cloudflare 将自动重新部署。`,
+			"success",
+		);
+	} catch (error) {
+		setStatus(
+			error instanceof Error ? error.message : "壁纸删除失败。",
+			"error",
+		);
+	} finally {
+		wallpaperUploading = false;
+		wallpaperUploadProgress = "";
+	}
 }
 
 function saveWriterSettings() {
@@ -760,7 +873,17 @@ onMount(() => {
 								</div>
 								<div class="wallpaper-grid">
 									{#each group.images as image}
-										<article class:active={selectedWallpapers().length === 1 && selectedWallpapers()[0] === image.path} class="wallpaper-item">
+										<article
+											class:active={selectedWallpapers().length === 1 && selectedWallpapers()[0] === image.path}
+											class:dragging={draggedWallpaperPath === image.path}
+											class="wallpaper-item"
+											draggable={authorized && !wallpaperUploading}
+											ondragstart={(event) => handleWallpaperDragStart(event, image.path)}
+											ondragend={() => (draggedWallpaperPath = "")}
+											ondragover={(event) => event.preventDefault()}
+											ondrop={(event) => handleWallpaperDrop(event, group, image.path)}
+										>
+											<button type="button" class="wallpaper-delete" onclick={() => void deleteWallpaper(group, image.path)} aria-label={`删除壁纸 ${image.name}`} title="删除壁纸">×</button>
 											<button type="button" class="wallpaper-preview" onclick={() => useSingleWallpaper(group, image.path)} aria-label={`使用壁纸 ${image.name}`}>
 												<img src={image.previewUrl} alt={image.name} loading="lazy" />
 												<span>使用此图</span>
@@ -887,8 +1010,12 @@ onMount(() => {
 	.wallpaper-upload-button { display: inline-flex !important; min-height: 2.35rem; align-items: center; justify-content: center; padding: .48rem .8rem; margin: 0 !important; border-radius: .5rem; font-size: .76rem !important; font-weight: 800 !important; cursor: pointer; }
 	.wallpaper-upload-button input, .wallpaper-replace input { position: absolute; width: 1px; height: 1px; min-height: 0; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
 	.wallpaper-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: .7rem; padding: .8rem; }
-	.wallpaper-item { min-width: 0; overflow: hidden; border: 1px solid var(--line-divider); border-radius: .55rem; background: var(--btn-regular-bg); }
+	.wallpaper-item { position: relative; min-width: 0; overflow: hidden; border: 1px solid var(--line-divider); border-radius: .55rem; background: var(--btn-regular-bg); transition: border-color 160ms ease-out, opacity 160ms ease-out, transform 160ms ease-out; }
 	.wallpaper-item.active { border-color: var(--primary); }
+	.wallpaper-item[draggable="true"] { cursor: grab; }
+	.wallpaper-item.dragging { opacity: .48; transform: scale(.98); }
+	.wallpaper-delete { position: absolute; z-index: 2; top: .4rem; right: .4rem; display: grid; width: 1.65rem; min-height: 1.65rem; place-items: center; padding: 0; border: 1px solid color-mix(in oklch, white 42%, transparent); border-radius: 999px; background: color-mix(in oklch, var(--deep-text) 38%, transparent); color: white; font-size: 1rem; line-height: 1; opacity: .72; transition: opacity 160ms ease-out, background-color 160ms ease-out; }
+	.wallpaper-delete:hover, .wallpaper-delete:focus-visible { background: color-mix(in oklch, #dc2626 76%, transparent); opacity: 1; }
 	.wallpaper-preview { position: relative; display: block; width: 100%; height: 7rem; padding: 0; overflow: hidden; border-radius: 0; background: var(--btn-regular-bg); }
 	.wallpaper-preview img { width: 100%; height: 100%; object-fit: cover; transition: transform 240ms cubic-bezier(.22, 1, .36, 1); }
 	.wallpaper-preview span { position: absolute; inset: auto .5rem .5rem auto; padding: .28rem .45rem; border-radius: .35rem; background: color-mix(in oklch, var(--deep-text) 82%, transparent); color: var(--card-bg); font-size: .62rem; opacity: 0; transform: translateY(.25rem); transition: opacity 180ms ease-out, transform 180ms ease-out; }
@@ -909,5 +1036,5 @@ onMount(() => {
 	@media (max-width: 900px) { .config-hero { align-items: flex-start; flex-direction: column; } .config-actions { justify-content: flex-start; } .auth-panel, .form-grid.three { grid-template-columns: 1fr; } }
 	@media (max-width: 900px) { .wallpaper-new-group { grid-template-columns: 1fr 1fr; } .wallpaper-new-group > div { grid-column: 1 / -1; } }
 	@media (max-width: 640px) { .form-grid.two, .toggle-grid, .profile-link, .skill-row, .project-rule, .wallpaper-new-group { grid-template-columns: 1fr; } .config-section > header { flex-direction: column; } .wallpaper-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-	@media (prefers-reduced-motion: reduce) { .wallpaper-preview img, .wallpaper-preview span { transition: none; } .wallpaper-upload-progress i::after { animation: none; width: 100%; } }
+	@media (prefers-reduced-motion: reduce) { .wallpaper-item, .wallpaper-delete, .wallpaper-preview img, .wallpaper-preview span { transition: none; } .wallpaper-upload-progress i::after { animation: none; width: 100%; } }
 </style>

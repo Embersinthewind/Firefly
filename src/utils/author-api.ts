@@ -201,3 +201,16 @@ export function uploadAuthorWallpaper(input: {
 		body: form,
 	});
 }
+
+export function deleteAuthorWallpaper(input: {
+	path: string;
+	target?: "desktop" | "mobile";
+}): Promise<AuthorWriteResult> {
+	return authorRequest<AuthorWriteResult>("/wallpapers", {
+		method: "DELETE",
+		body: JSON.stringify({
+			path: input.path,
+			target: input.target || "desktop",
+		}),
+	});
+}

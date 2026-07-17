@@ -726,6 +726,62 @@ async function uploadWallpaper(request: Request, env: Env): Promise<Response> {
 	});
 }
 
+async function deleteWallpaper(request: Request, env: Env): Promise<Response> {
+	const body = await readJsonBody(request, 32 * 1024);
+	const target: WallpaperTarget =
+		body.target === "mobile" ? "mobile" : "desktop";
+	const directory = wallpaperDirectory(env, target);
+	const requestedPath =
+		typeof body.path === "string" ? body.path.trim().replace(/^\/+/, "") : "";
+	const repositoryPath = requestedPath.startsWith("assets/")
+		? `src/${requestedPath}`
+		: requestedPath;
+	if (
+		!repositoryPath.startsWith(`${directory}/`) ||
+		!isWallpaperPath(repositoryPath)
+	) {
+		throw new HttpError(400, "invalid_wallpaper_path", "删除的壁纸路径无效。");
+	}
+
+	const config = requireGitHubConfig(env);
+	const current = await fetch(
+		`${githubContentUrl(env, repositoryPath)}?ref=${encodeURIComponent(config.branch)}`,
+		{ headers: githubHeaders(config.token) },
+	);
+	if (!current.ok)
+		throw await githubError(current, `读取壁纸 ${repositoryPath}`);
+	const sha = ((await current.json()) as GitHubFile).sha;
+	if (!sha) {
+		throw new HttpError(
+			502,
+			"invalid_github_response",
+			"GitHub 未返回壁纸版本信息。",
+		);
+	}
+
+	const response = await fetch(githubContentUrl(env, repositoryPath), {
+		method: "DELETE",
+		headers: {
+			...githubHeaders(config.token),
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify({
+			branch: config.branch,
+			sha,
+			message: `feat: delete wallpaper ${repositoryPath.split("/").pop()}`,
+		}),
+	});
+	if (!response.ok)
+		throw await githubError(response, `删除壁纸 ${repositoryPath}`);
+	const payload = (await response.json()) as {
+		commit?: { html_url?: string; sha?: string };
+	};
+	return json({
+		commitUrl: payload.commit?.html_url || "",
+		sha: payload.commit?.sha || sha,
+	});
+}
+
 function assertSameOrigin(request: Request): void {
 	if (!["POST", "PUT", "PATCH", "DELETE"].includes(request.method)) return;
 	const origin = request.headers.get("Origin");
@@ -842,6 +898,8 @@ async function handleAuthorApi(request: Request, env: Env): Promise<Response> {
 		);
 	if (path === "/wallpapers" && request.method === "POST")
 		return uploadWallpaper(request, env);
+	if (path === "/wallpapers" && request.method === "DELETE")
+		return deleteWallpaper(request, env);
 	if (path === "/articles" && request.method === "POST")
 		return publishArticle(request, env);
 
