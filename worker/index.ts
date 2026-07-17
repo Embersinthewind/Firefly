@@ -14,6 +14,7 @@ type Env = {
 	GITHUB_NAVIGATION_PATH?: string;
 	GITHUB_POSTS_DIR?: string;
 	GITHUB_WALLPAPER_DIR?: string;
+	GITHUB_MOBILE_WALLPAPER_DIR?: string;
 	AUTHOR_PASSWORD?: string;
 	AUTHOR_SESSION_SECRET?: string;
 	AUTHOR_NAME?: string;
@@ -508,10 +509,16 @@ async function uploadKVaultImage(request: Request): Promise<Response> {
 	return json(payload);
 }
 
-function wallpaperDirectory(env: Env): string {
-	return (
-		env.GITHUB_WALLPAPER_DIR?.trim() || "src/assets/images/DesktopWallpaper"
-	).replace(/^\/+|\/+$/g, "");
+type WallpaperTarget = "desktop" | "mobile";
+
+function wallpaperDirectory(env: Env, target: WallpaperTarget): string {
+	const directory =
+		target === "mobile"
+			? env.GITHUB_MOBILE_WALLPAPER_DIR?.trim() ||
+				"src/assets/images/MobileWallpaper"
+			: env.GITHUB_WALLPAPER_DIR?.trim() ||
+				"src/assets/images/DesktopWallpaper";
+	return directory.replace(/^\/+|\/+$/g, "");
 }
 
 function wallpaperPreviewUrl(env: Env, path: string): string {
@@ -524,9 +531,12 @@ function isWallpaperPath(path: string): boolean {
 	return /\.(?:avif|webp|png|jpe?g)$/i.test(path);
 }
 
-async function listWallpapers(env: Env): Promise<Response> {
+async function listWallpapers(
+	env: Env,
+	target: WallpaperTarget,
+): Promise<Response> {
 	const config = requireGitHubConfig(env);
-	const directory = wallpaperDirectory(env);
+	const directory = wallpaperDirectory(env, target);
 	const treeUrl = `https://api.github.com/repos/${encodeURIComponent(config.owner)}/${encodeURIComponent(config.repo)}/git/trees/${encodeURIComponent(config.branch)}?recursive=1`;
 	const response = await fetch(treeUrl, {
 		headers: githubHeaders(config.token),
@@ -625,6 +635,8 @@ async function uploadWallpaper(request: Request, env: Env): Promise<Response> {
 		throw new HttpError(413, "wallpaper_too_large", "单张壁纸不能超过 10 MB。");
 	}
 	const form = await request.formData();
+	const target: WallpaperTarget =
+		String(form.get("target") || "desktop") === "mobile" ? "mobile" : "desktop";
 	const file = form.get("file");
 	if (!(file instanceof File) || !file.type.startsWith("image/")) {
 		throw new HttpError(
@@ -636,7 +648,7 @@ async function uploadWallpaper(request: Request, env: Env): Promise<Response> {
 	if (file.size > 10 * 1024 * 1024) {
 		throw new HttpError(413, "wallpaper_too_large", "单张壁纸不能超过 10 MB。");
 	}
-	const directory = wallpaperDirectory(env);
+	const directory = wallpaperDirectory(env, target);
 	const group = normalizeWallpaperGroup(String(form.get("group") || ""));
 	const replacePath = String(form.get("replacePath") || "").trim();
 	const uploadedName = safeWallpaperFileName(
@@ -824,7 +836,10 @@ async function handleAuthorApi(request: Request, env: Env): Promise<Response> {
 	if (path === "/images" && request.method === "POST")
 		return uploadKVaultImage(request);
 	if (path === "/wallpapers" && request.method === "GET")
-		return listWallpapers(env);
+		return listWallpapers(
+			env,
+			url.searchParams.get("target") === "mobile" ? "mobile" : "desktop",
+		);
 	if (path === "/wallpapers" && request.method === "POST")
 		return uploadWallpaper(request, env);
 	if (path === "/articles" && request.method === "POST")

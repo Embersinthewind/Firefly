@@ -89,7 +89,7 @@ export type PortfolioData = {
 		bannerTitle: string;
 		bannerSubtitle: string[];
 		desktopWallpaper: string | string[];
-		mobileWallpaper: string;
+		mobileWallpaper: string | string[];
 	};
 	statusEvent: {
 		mode: HeroStatusMode;

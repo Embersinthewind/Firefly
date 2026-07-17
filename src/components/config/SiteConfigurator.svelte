@@ -39,11 +39,13 @@ const {
 	initialProfile,
 	initialPortfolio,
 	initialWallpaperGroups,
+	initialMobileWallpaperGroups,
 }: {
 	initialSite: SiteEditorSiteData;
 	initialProfile: SiteEditorProfileData;
 	initialPortfolio: PortfolioData;
 	initialWallpaperGroups: WallpaperGroup[];
+	initialMobileWallpaperGroups: WallpaperGroup[];
 	repository: SiteEditorGitHubConfig;
 } = $props();
 
@@ -118,6 +120,10 @@ let writerSettings = $state<KVaultWriterSettings>(
 	clone(defaultKVaultWriterSettings),
 );
 let wallpaperGroups = $state<WallpaperGroup[]>(clone(initialWallpaperGroups));
+let mobileWallpaperGroups = $state<WallpaperGroup[]>(
+	clone(initialMobileWallpaperGroups),
+);
+let wallpaperTarget = $state<"desktop" | "mobile">("desktop");
 let newWallpaperGroup = $state("");
 let wallpaperUploading = $state(false);
 let wallpaperUploadProgress = $state("");
@@ -176,18 +182,27 @@ async function connectGitHub(redirectIfNeeded = false) {
 			return;
 		}
 
-		const [siteFile, profileFile, portfolioFile, wallpaperFile] =
-			await Promise.all([
-				readRepositoryFile("site"),
-				readRepositoryFile("profile"),
-				readRepositoryFile("portfolio"),
-				listAuthorWallpapers().catch(() => null),
-			]);
+		const [
+			siteFile,
+			profileFile,
+			portfolioFile,
+			wallpaperFile,
+			mobileWallpaperFile,
+		] = await Promise.all([
+			readRepositoryFile("site"),
+			readRepositoryFile("profile"),
+			readRepositoryFile("portfolio"),
+			listAuthorWallpapers("desktop").catch(() => null),
+			listAuthorWallpapers("mobile").catch(() => null),
+		]);
 		site = clone(siteFile.data as SiteEditorSiteData);
 		profile = clone(profileFile.data as SiteEditorProfileData);
 		portfolio = normalizePortfolio(portfolioFile.data as PortfolioData);
 		if (wallpaperFile?.groups?.length) {
 			wallpaperGroups = clone(wallpaperFile.groups);
+		}
+		if (mobileWallpaperFile?.groups?.length) {
+			mobileWallpaperGroups = clone(mobileWallpaperFile.groups);
 		}
 		baseline = {
 			site: clone(site),
@@ -347,16 +362,32 @@ function removeProjectMeta(index: number) {
 	portfolio.github.projectMeta.splice(index, 1);
 }
 
-function useDefaultDesktopWallpapers() {
-	portfolio.appearance.desktopWallpaper = "";
-	setStatus("已选择仓库默认桌面壁纸，提交配置后生效。", "info");
+function wallpaperGroupsFor(target = wallpaperTarget): WallpaperGroup[] {
+	return target === "mobile" ? mobileWallpaperGroups : wallpaperGroups;
+}
+
+function wallpaperValue(target = wallpaperTarget): string | string[] {
+	return target === "mobile"
+		? portfolio.appearance.mobileWallpaper
+		: portfolio.appearance.desktopWallpaper;
+}
+
+function setWallpaperValue(value: string | string[], target = wallpaperTarget) {
+	if (target === "mobile") portfolio.appearance.mobileWallpaper = value;
+	else portfolio.appearance.desktopWallpaper = value;
+}
+
+function useDefaultWallpapers() {
+	setWallpaperValue("");
+	setStatus(
+		`已选择仓库默认${wallpaperTarget === "mobile" ? "移动端" : "桌面端"}壁纸，提交配置后生效。`,
+		"info",
+	);
 }
 
 function useWallpaperGroup(group: WallpaperGroup) {
 	if (!authorized || group.images.length === 0) return;
-	portfolio.appearance.desktopWallpaper = group.images.map(
-		(image) => image.path,
-	);
+	setWallpaperValue(group.images.map((image) => image.path));
 	setStatus(
 		`已选择“${group.name}”壁纸组，共 ${group.images.length} 张。`,
 		"info",
@@ -365,18 +396,25 @@ function useWallpaperGroup(group: WallpaperGroup) {
 
 function useSingleWallpaper(group: WallpaperGroup, imagePath: string) {
 	if (!authorized) return;
-	portfolio.appearance.desktopWallpaper = imagePath;
+	setWallpaperValue(imagePath);
 	setStatus(`已选择“${group.name}”中的单张壁纸。`, "info");
 }
 
-function selectedDesktopWallpapers(): string[] {
-	const current = portfolio.appearance.desktopWallpaper;
+function selectedWallpapers(): string[] {
+	const current = wallpaperValue();
 	if (!current) return [];
 	return Array.isArray(current) ? current : [current];
 }
 
+function customWallpaperUrl(): string {
+	const current = wallpaperValue();
+	return typeof current === "string" && /^https?:\/\//.test(current)
+		? current
+		: "";
+}
+
 function isWallpaperGroupSelected(group: WallpaperGroup): boolean {
-	const selected = selectedDesktopWallpapers();
+	const selected = selectedWallpapers();
 	if (selected.length === 0) return group.name === "默认壁纸";
 	return (
 		selected.length === group.images.length &&
@@ -385,22 +423,26 @@ function isWallpaperGroupSelected(group: WallpaperGroup): boolean {
 }
 
 function updateWallpaperGroup(
+	target: "desktop" | "mobile",
 	groupPath: string,
 	image: WallpaperGroup["images"][number],
 	replacedPath?: string,
 ) {
-	let group = wallpaperGroups.find((item) => item.path === groupPath);
+	const groups = wallpaperGroupsFor(target);
+	let group = groups.find((item) => item.path === groupPath);
 	if (!group) {
 		group = {
 			name: groupPath || "默认壁纸",
 			path: groupPath,
 			images: [],
 		};
-		wallpaperGroups = [...wallpaperGroups, group].sort((left, right) => {
+		const nextGroups = [...groups, group].sort((left, right) => {
 			if (left.name === "默认壁纸") return -1;
 			if (right.name === "默认壁纸") return 1;
 			return left.name.localeCompare(right.name, "zh-CN", { numeric: true });
 		});
+		if (target === "mobile") mobileWallpaperGroups = nextGroups;
+		else wallpaperGroups = nextGroups;
 	}
 	const replacementIndex = replacedPath
 		? group.images.findIndex((item) => item.path === replacedPath)
@@ -418,6 +460,7 @@ async function uploadWallpaperFiles(
 	replacePath?: string,
 ) {
 	if (!authorized || wallpaperUploading || !files?.length) return;
+	const target = wallpaperTarget;
 	wallpaperUploading = true;
 	const items = Array.from(files);
 	try {
@@ -426,9 +469,11 @@ async function uploadWallpaperFiles(
 			const payload = await uploadAuthorWallpaper({
 				file,
 				group: groupPath,
+				target,
 				replacePath,
 			});
 			updateWallpaperGroup(
+				target,
 				groupPath,
 				{
 					...payload.image,
@@ -681,22 +726,26 @@ onMount(() => {
 				</div>
 				<div class="config-section">
 					<header>
-						<div><h2>桌面壁纸库</h2><p>选择单张壁纸，或让同一文件夹中的图片随机轮播。</p></div>
-						<button type="button" class="button-secondary" onclick={useDefaultDesktopWallpapers}>恢复默认</button>
+						<div><h2>壁纸库</h2><p>分别管理桌面端与移动端壁纸，支持单张图片或文件夹随机轮播。</p></div>
+						<button type="button" class="button-secondary" onclick={useDefaultWallpapers}>恢复当前端默认</button>
 					</header>
+					<div class="wallpaper-target-switch" aria-label="壁纸设备类型">
+						<button type="button" class:active={wallpaperTarget === "desktop"} onclick={() => (wallpaperTarget = "desktop")}>桌面端</button>
+						<button type="button" class:active={wallpaperTarget === "mobile"} onclick={() => (wallpaperTarget = "mobile")}>移动端</button>
+					</div>
 					<div class="wallpaper-selection-summary">
-						<span>当前选择</span>
+						<span>{wallpaperTarget === "mobile" ? "移动端" : "桌面端"}当前选择</span>
 						<strong>
-							{selectedDesktopWallpapers().length === 0
+							{selectedWallpapers().length === 0
 								? "仓库默认壁纸"
-								: selectedDesktopWallpapers().length === 1
+								: selectedWallpapers().length === 1
 									? "单张壁纸"
-									: `${selectedDesktopWallpapers().length} 张轮播壁纸`}
+									: `${selectedWallpapers().length} 张轮播壁纸`}
 						</strong>
 					</div>
 
 					<div class="wallpaper-groups">
-						{#each wallpaperGroups as group}
+						{#each wallpaperGroupsFor() as group}
 							<details class:wallpaper-group-selected={isWallpaperGroupSelected(group)} class="wallpaper-group" open={isWallpaperGroupSelected(group)}>
 								<summary>
 									<div><strong>{group.name}</strong><span>{group.images.length} 张图片</span></div>
@@ -711,7 +760,7 @@ onMount(() => {
 								</div>
 								<div class="wallpaper-grid">
 									{#each group.images as image}
-										<article class:active={selectedDesktopWallpapers().length === 1 && selectedDesktopWallpapers()[0] === image.path} class="wallpaper-item">
+										<article class:active={selectedWallpapers().length === 1 && selectedWallpapers()[0] === image.path} class="wallpaper-item">
 											<button type="button" class="wallpaper-preview" onclick={() => useSingleWallpaper(group, image.path)} aria-label={`使用壁纸 ${image.name}`}>
 												<img src={image.previewUrl} alt={image.name} loading="lazy" />
 												<span>使用此图</span>
@@ -741,8 +790,7 @@ onMount(() => {
 					{#if wallpaperUploading}
 						<div class="wallpaper-upload-progress" role="status"><i></i><span>{wallpaperUploadProgress}</span></div>
 					{/if}
-					<label>自定义桌面壁纸 URL<input type="url" value={typeof portfolio.appearance.desktopWallpaper === "string" && /^https?:\/\//.test(portfolio.appearance.desktopWallpaper) ? portfolio.appearance.desktopWallpaper : ""} oninput={(event) => (portfolio.appearance.desktopWallpaper = event.currentTarget.value)} placeholder="https://example.com/wallpaper.webp" /></label>
-					<label>移动壁纸 URL<input type="url" bind:value={portfolio.appearance.mobileWallpaper} placeholder="留空使用默认壁纸" /></label>
+					<label>自定义{wallpaperTarget === "mobile" ? "移动端" : "桌面端"}壁纸 URL<input type="url" value={customWallpaperUrl()} oninput={(event) => setWallpaperValue(event.currentTarget.value)} placeholder="https://example.com/wallpaper.webp" /></label>
 				</div>
 			{:else if activeTab === "sidebar"}
 				<div class="config-section">
@@ -820,6 +868,9 @@ onMount(() => {
 	.skill-row { grid-template-columns: 1fr 1.5fr auto; }
 	.project-rule { grid-template-columns: .9fr .8fr 1.25fr auto; }
 	.danger { border: 1px solid color-mix(in oklch, #dc2626 38%, transparent); background: transparent; color: #dc2626; }
+	.wallpaper-target-switch { display: inline-flex; gap: .2rem; padding: .2rem; margin-bottom: .8rem; border-radius: .55rem; background: var(--btn-regular-bg); }
+	.wallpaper-target-switch button { min-height: 2rem; padding: .35rem .75rem; background: transparent; color: var(--content-meta); }
+	.wallpaper-target-switch button.active { background: var(--primary); color: oklch(.18 .02 var(--hue)); }
 	.wallpaper-selection-summary { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .75rem .9rem; margin-bottom: .8rem; border-radius: .55rem; background: var(--btn-regular-bg); color: var(--content-meta); font-size: .72rem; }
 	.wallpaper-selection-summary strong { color: var(--deep-text); font-size: .78rem; }
 	.wallpaper-groups { display: grid; gap: .65rem; }

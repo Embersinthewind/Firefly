@@ -11,43 +11,62 @@ import portfolioData from "../data/portfolio.json";
 import profileData from "../data/profile.json";
 import siteData from "../data/site.json";
 
-const wallpaperModules = import.meta.glob<string>(
+const desktopWallpaperModules = import.meta.glob<string>(
 	"../assets/images/DesktopWallpaper/**/*.{avif,webp,png,jpg,jpeg}",
 	{ eager: true, query: "?url", import: "default" },
 );
-const wallpaperGroupMap = new Map<string, WallpaperGroup>();
-for (const [modulePath, previewUrl] of Object.entries(wallpaperModules)) {
-	const relativePath = modulePath.replace(
-		"../assets/images/DesktopWallpaper/",
-		"",
-	);
-	const lastSlash = relativePath.lastIndexOf("/");
-	const groupPath = lastSlash >= 0 ? relativePath.slice(0, lastSlash) : "";
-	const name = relativePath.slice(lastSlash + 1);
-	const group = wallpaperGroupMap.get(groupPath) || {
-		name: groupPath || "默认壁纸",
-		path: groupPath,
-		images: [],
-	};
-	group.images.push({
-		name,
-		path: `assets/images/DesktopWallpaper/${relativePath}`,
-		previewUrl,
-	});
-	wallpaperGroupMap.set(groupPath, group);
+const mobileWallpaperModules = import.meta.glob<string>(
+	"../assets/images/MobileWallpaper/**/*.{avif,webp,png,jpg,jpeg}",
+	{ eager: true, query: "?url", import: "default" },
+);
+
+function createWallpaperGroups(
+	modules: Record<string, string>,
+	directory: "DesktopWallpaper" | "MobileWallpaper",
+): WallpaperGroup[] {
+	const groupMap = new Map<string, WallpaperGroup>();
+	for (const [modulePath, previewUrl] of Object.entries(modules)) {
+		const relativePath = modulePath.replace(
+			`../assets/images/${directory}/`,
+			"",
+		);
+		const lastSlash = relativePath.lastIndexOf("/");
+		const groupPath = lastSlash >= 0 ? relativePath.slice(0, lastSlash) : "";
+		const name = relativePath.slice(lastSlash + 1);
+		const group = groupMap.get(groupPath) || {
+			name: groupPath || "默认壁纸",
+			path: groupPath,
+			images: [],
+		};
+		group.images.push({
+			name,
+			path: `assets/images/${directory}/${relativePath}`,
+			previewUrl,
+		});
+		groupMap.set(groupPath, group);
+	}
+	return Array.from(groupMap.values())
+		.map((group) => ({
+			...group,
+			images: group.images.sort((left, right) =>
+				left.name.localeCompare(right.name, "zh-CN", { numeric: true }),
+			),
+		}))
+		.sort((left, right) => {
+			if (left.name === "默认壁纸") return -1;
+			if (right.name === "默认壁纸") return 1;
+			return left.name.localeCompare(right.name, "zh-CN", { numeric: true });
+		});
 }
-const initialWallpaperGroups = Array.from(wallpaperGroupMap.values())
-	.map((group) => ({
-		...group,
-		images: group.images.sort((left, right) =>
-			left.name.localeCompare(right.name, "zh-CN", { numeric: true }),
-		),
-	}))
-	.sort((left, right) => {
-		if (left.name === "默认壁纸") return -1;
-		if (right.name === "默认壁纸") return 1;
-		return left.name.localeCompare(right.name, "zh-CN", { numeric: true });
-	});
+
+const initialWallpaperGroups = createWallpaperGroups(
+	desktopWallpaperModules,
+	"DesktopWallpaper",
+);
+const initialMobileWallpaperGroups = createWallpaperGroups(
+	mobileWallpaperModules,
+	"MobileWallpaper",
+);
 ---
 
 <MainGridLayout title="站点配置" description="通过 GitHub 权限保护的可视化站点配置页面">
@@ -56,6 +75,7 @@ const initialWallpaperGroups = Array.from(wallpaperGroupMap.values())
 		initialProfile={profileData}
 		initialPortfolio={portfolioData as PortfolioData}
 		{initialWallpaperGroups}
+		{initialMobileWallpaperGroups}
 		repository={siteEditorGitHubConfig}
 		client:load
 	/>

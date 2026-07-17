@@ -4,12 +4,6 @@
   "src:assets/images/avatar.avif": "dcd8d5d1cecabea9a9",
   "public:gallery/firefly-2026/cover.avif": "7588a28a8f989e8d88",
   "public:gallery/firefly-2026/1.avif": "c8bca9dde6d2babfb5",
-  "src:assets/images/MobileWallpaper/m6.avif": "a08eaac3abbfc7bdc8",
-  "src:assets/images/MobileWallpaper/m5.avif": "af99aecab1c1d2c2cb",
-  "src:assets/images/MobileWallpaper/m4.avif": "f0e1e2d4bfc7c2abc1",
-  "src:assets/images/MobileWallpaper/m3.avif": "c3a6b4dac2cad2c0c9",
-  "src:assets/images/MobileWallpaper/m2.avif": "f1e0ded8c2c6bbb0bc",
-  "src:assets/images/MobileWallpaper/m1.avif": "cccce0cbc0d59294c0",
   "public:assets/images/sponsor/wechat.png": "d5d5d5dad9d7dbd8cf",
   "public:assets/images/sponsor/alipay.png": "8ebbde91bedf93c0e0",
   "public:assets/images/ad/ad1.webp": "a1b8b68a8e918c8f93",
@@ -39,5 +33,11 @@
   "src:assets/images/DesktopWallpaper/凡人修仙传/4.avif": "201c19473323433322",
   "src:assets/images/DesktopWallpaper/凡人修仙传/3.avif": "9eabc7b5b4bd80828e",
   "src:assets/images/DesktopWallpaper/凡人修仙传/2.avif": "212f311927282e4343",
-  "src:assets/images/DesktopWallpaper/凡人修仙传/1.avif": "6e725b737466525853"
+  "src:assets/images/DesktopWallpaper/凡人修仙传/1.avif": "6e725b737466525853",
+  "src:assets/images/MobileWallpaper/默认壁纸/m6.avif": "a08eaac3abbfc7bdc8",
+  "src:assets/images/MobileWallpaper/默认壁纸/m5.avif": "af99aecab1c1d2c2cb",
+  "src:assets/images/MobileWallpaper/默认壁纸/m4.avif": "f0e1e2d4bfc7c2abc1",
+  "src:assets/images/MobileWallpaper/默认壁纸/m3.avif": "c3a6b4dac2cad2c0c9",
+  "src:assets/images/MobileWallpaper/默认壁纸/m2.avif": "f1e0ded8c2c6bbb0bc",
+  "src:assets/images/MobileWallpaper/默认壁纸/m1.avif": "cccce0cbc0d59294c0"
 }

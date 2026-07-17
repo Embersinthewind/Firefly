@@ -175,20 +175,26 @@ export function uploadAuthorImage(input: {
 	});
 }
 
-export function listAuthorWallpapers(): Promise<{
+export function listAuthorWallpapers(
+	target: "desktop" | "mobile" = "desktop",
+): Promise<{
 	groups: AuthorWallpaperGroup[];
 }> {
-	return authorRequest<{ groups: AuthorWallpaperGroup[] }>("/wallpapers");
+	return authorRequest<{ groups: AuthorWallpaperGroup[] }>(
+		`/wallpapers?target=${target}`,
+	);
 }
 
 export function uploadAuthorWallpaper(input: {
 	file: File;
 	group: string;
+	target?: "desktop" | "mobile";
 	replacePath?: string;
 }): Promise<AuthorWallpaperUploadResult> {
 	const form = new FormData();
 	form.append("file", input.file);
 	form.append("group", input.group);
+	form.append("target", input.target || "desktop");
 	if (input.replacePath) form.append("replacePath", input.replacePath);
 	return authorRequest<AuthorWallpaperUploadResult>("/wallpapers", {
 		method: "POST",

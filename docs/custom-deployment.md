@@ -79,6 +79,7 @@ pnpm build
 - `GITHUB_NAVIGATION_PATH`
 - `GITHUB_POSTS_DIR`
 - `GITHUB_WALLPAPER_DIR`（默认 `src/assets/images/DesktopWallpaper`）
+- `GITHUB_MOBILE_WALLPAPER_DIR`（默认 `src/assets/images/MobileWallpaper`）
 
 若复制本仓库建立自己的站点，请把其中的仓库所有者、仓库名称和文件路径改成自己的值。
 
@@ -109,9 +110,9 @@ pnpm build
 
 ### 壁纸组管理
 
-“站点配置 → 背景壁纸”会把 `GITHUB_WALLPAPER_DIR` 下的每个子文件夹识别为一个壁纸组。作者登录后可以创建并命名新组、批量上传 AVIF/WebP/PNG/JPG、向现有组添加图片，或保持原扩展名替换某一张图片。选择单张或整组后仍需点击页面顶部“提交配置”，Cloudflare 完成下一次构建后生效。
+“站点配置 → 背景壁纸”会把桌面端和移动端壁纸目录下的每个子文件夹识别为一个壁纸组。作者登录后可以切换设备类型、创建并命名新组、批量上传 AVIF/WebP/PNG/JPG、向现有组添加图片，或保持原扩展名替换某一张图片。选择单张或整组后仍需点击页面顶部“提交配置”，Cloudflare 完成下一次构建后生效。
 
-仓库自带的 6 张壁纸位于 `默认壁纸` 文件夹。建议优先上传 AVIF 或 WebP，单张文件不能超过 10 MB。
+仓库自带的桌面端和移动端壁纸分别位于各自的 `默认壁纸` 文件夹。建议优先上传 AVIF 或 WebP，单张文件不能超过 10 MB。
 
 ## 4. GitHub Token 权限
 
