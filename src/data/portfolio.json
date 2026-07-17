@@ -163,7 +163,7 @@
 			"assets/images/DesktopWallpaper/凡人修仙传/3.avif",
 			"assets/images/DesktopWallpaper/凡人修仙传/4.avif"
 		],
-		"mobileWallpaper": ""
+		"mobileWallpaper": "assets/images/MobileWallpaper/默认壁纸/m1.avif"
 	},
 	"announcement": {
 		"title": "公告",
