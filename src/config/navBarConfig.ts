@@ -12,12 +12,7 @@ const getDynamicNavBarConfig = (): NavBarConfig => {
 		name: "文章",
 		url: "/articles/",
 		icon: "material-symbols:article",
-		children: [
-			LinkPresets.Articles,
-			LinkPresets.Categories,
-			LinkPresets.Archive,
-			LinkPresets.Write,
-		],
+		children: [LinkPresets.Articles, LinkPresets.Categories, LinkPresets.Write],
 	});
 
 	links.push(LinkPresets.Navigation);
@@ -81,11 +76,6 @@ export const LinkPresets: Record<string, NavBarLink> = {
 		name: "分类",
 		url: "/categories/",
 		icon: "material-symbols:folder-open-rounded",
-	},
-	Archive: {
-		name: "归档",
-		url: "/archive/",
-		icon: "material-symbols:archive",
 	},
 	Write: {
 		name: "写文章",

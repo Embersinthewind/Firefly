@@ -3,10 +3,6 @@ import ArchivePanel from "@components/controls/ArchivePanel.astro";
 import I18nKey from "@i18n/i18nKey";
 import { i18n } from "@i18n/translation";
 import MainGridLayout from "@layouts/MainGridLayout.astro";
-import ArchiveHeatmap from "@/components/articles/ArchiveHeatmap.astro";
-import { getSortedPosts } from "@/utils/content-utils";
-
-const posts = await getSortedPosts();
 ---
 
 <MainGridLayout title={i18n(I18nKey.archive)} contentOnly={true}>
@@ -16,7 +12,6 @@ const posts = await getSortedPosts();
 			<h1>归档</h1>
 			<span>沿着时间重新找到写过的内容。</span>
 		</header>
-		<ArchiveHeatmap posts={posts} />
 		<ArchivePanel />
 	</section>
 </MainGridLayout>

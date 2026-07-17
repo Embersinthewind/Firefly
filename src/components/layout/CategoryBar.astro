@@ -14,17 +14,17 @@ const { currentPostCategory } = Astro.props as Props;
 const categories = await getCategoryList();
 const totalPosts = (await getSortedPostsList()).length;
 const homeUrl = url("/");
-const archiveUrl = url("/archive/");
+const articlesUrl = url("/articles/");
 
 // 服务端计算初始高亮 pill（首屏无需等 JS）。
 // 查询串筛选（?category=/?tag=/?uncategorized）在静态页构建期不可知，
 // 交由客户端脚本在加载/导航时同步；此处只处理路径可确定的情况。
 const pathname = Astro.url.pathname.replace(/\/$/, "");
 const homePath = homeUrl.replace(/\/$/, "");
-const archivePath = archiveUrl.replace(/\/$/, "");
+const articlesPath = articlesUrl.replace(/\/$/, "");
 const isHome = pathname === homePath || pathname === "" || pathname === "/";
 const isCategories = pathname === "/categories";
-const isArchive = pathname === archivePath;
+const isArticles = pathname === articlesPath;
 const postCategory = (currentPostCategory || "").trim();
 
 // 返回某个 pill 的初始高亮属性：active（强）或 soft-active（弱，文章页所属分类）
@@ -35,7 +35,8 @@ function initialActive(categoryName: string): {
 	if (isHome) return categoryName === "" ? { active: true } : {};
 	if (isCategories)
 		return categoryName === "__categories__" ? { active: true } : {};
-	if (isArchive) return categoryName === "__archive__" ? { active: true } : {};
+	if (isArticles)
+		return categoryName === "__articles__" ? { active: true } : {};
 	if (postCategory && categoryName === postCategory) return { soft: true };
 	return {};
 }
@@ -45,7 +46,7 @@ function initialActive(categoryName: string): {
   class="card-base category-bar p-3 onload-animation"
   id="category-bar"
   data-home-path={homeUrl}
-  data-archive-path={archiveUrl}
+  data-articles-path={articlesUrl}
   data-current-post-category={currentPostCategory || ""}
 >
   <div class="category-bar-inner flex gap-2">
@@ -60,13 +61,13 @@ function initialActive(categoryName: string): {
       <Icon is:inline name="material-symbols:home" class="text-lg" />
     </a>
     <a
-      href={archiveUrl}
+      href={articlesUrl}
       class="category-pill text-sm px-4 py-1.5 rounded-full whitespace-nowrap shrink-0
              transition-colors duration-150 ease-out flex items-center justify-center"
-      data-category-name="__archive__"
-      data-active={initialActive("__archive__").active ? "" : undefined}
+      data-category-name="__articles__"
+      data-active={initialActive("__articles__").active ? "" : undefined}
     >
-      {i18n(I18nKey.archive)}
+      全部文章
       <span class="pill-count">{totalPosts}</span>
     </a>
     <div class="category-divider shrink-0"></div>
@@ -174,14 +175,14 @@ function initialActive(categoryName: string): {
   function getCategoryBarState(bar: HTMLElement, currentUrl: URL) {
     const pathname = currentUrl.pathname.replace(/\/$/, "");
     const homePath = (bar.getAttribute("data-home-path") || "/").replace(/\/$/, "");
-    const archivePath = (bar.getAttribute("data-archive-path") || "/archive").replace(/\/$/, "");
+    const articlesPath = (bar.getAttribute("data-articles-path") || "/articles").replace(/\/$/, "");
     const isHome = pathname === homePath || pathname === "" || pathname === "/";
-    const isArchive = pathname === archivePath;
+    const isArticles = pathname === articlesPath;
     const isCategories = pathname === "/categories";
 
     return {
       isHome,
-      isArchive,
+      isArticles,
       isCategories,
       activeCategory: currentUrl.searchParams.get("category") || "",
       hasTag: currentUrl.searchParams.has("tag"),
@@ -190,7 +191,7 @@ function initialActive(categoryName: string): {
   }
 
   function setActiveCategory(bar: HTMLElement, currentUrl: URL) {
-    const { isHome, isArchive, isCategories, activeCategory, hasTag, hasUncategorized } =
+    const { isHome, isArticles, isCategories, activeCategory } =
       getCategoryBarState(bar, currentUrl);
     const postCategory = (bar.getAttribute("data-current-post-category") || "").trim();
 
@@ -221,8 +222,8 @@ function initialActive(categoryName: string): {
       return;
     }
 
-    if (isArchive && !hasTag && !hasUncategorized) {
-      bar.querySelector<HTMLAnchorElement>('.category-pill[data-category-name="__archive__"]')
+    if (isArticles) {
+      bar.querySelector<HTMLAnchorElement>('.category-pill[data-category-name="__articles__"]')
         ?.setAttribute("data-active", "");
       return;
     }

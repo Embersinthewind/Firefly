@@ -1,6 +1,7 @@
 ---
 import type { CollectionEntry } from "astro:content";
 import { Icon } from "astro-icon/components";
+import WritingTrajectory from "@/components/articles/WritingTrajectory.astro";
 import CoverImage from "@/components/common/CoverImage.astro";
 import { getCategoryList } from "@/utils/content-utils";
 import { formatDateToYYYYMMDD } from "@/utils/date-utils";
@@ -10,9 +11,10 @@ import { getFileDirFromPath, getPostUrlBySlug, url } from "@/utils/url-utils";
 interface Props {
 	posts: CollectionEntry<"posts">[];
 	total: number;
+	publishedDates: Date[];
 }
 
-const { posts, total } = Astro.props;
+const { posts, total, publishedDates } = Astro.props;
 const categories = await getCategoryList();
 ---
 
@@ -32,6 +34,7 @@ const categories = await getCategoryList();
 				}
 			</nav>
 		</div>
+		<WritingTrajectory publishedDates={publishedDates} />
 		<div class="article-write">
 			<h2>写作</h2>
 			<a href={url("/write/")}><Icon is:inline name="material-symbols:add-rounded" />写新文章</a>
@@ -40,42 +43,58 @@ const categories = await getCategoryList();
 
 	<div class="article-list">
 		<header class="article-list__header">
-			<div>
+			<div class="article-list__heading">
 				<span>ARTICLE INDEX</span>
 				<h1 id="article-library-title">文章列表</h1>
+				<div class="article-view-switch" aria-label="文章显示方式">
+					<button type="button" data-article-view-button="list" aria-label="列表视图" aria-pressed="true">
+						<Icon is:inline name="material-symbols:list-rounded" />
+						<span>列表</span>
+					</button>
+					<button type="button" data-article-view-button="grid" aria-label="三列卡片视图" aria-pressed="false">
+						<Icon is:inline name="material-symbols:grid-view-rounded" />
+						<span>卡片</span>
+					</button>
+				</div>
 			</div>
 			<p><strong>{total}</strong> 篇文章</p>
 		</header>
 
-		<div class="article-list__items">
+		<div class="article-list__items" data-article-library data-view="list">
 			{
 				posts.map((post) => {
 					const image = processCoverImageSync(post.data.image, post.id);
 					const apiUrls = getApiUrlList(post.data.image, post.id);
 					return (
 						<article class:list={["article-row", image && "article-row--cover"]}>
-							{image && (
-								<div class="article-row__image" aria-hidden="true">
-									<CoverImage
-										src={image}
-										basePath={getFileDirFromPath(post.filePath || "")}
-										alt=""
-										preview={true}
-										apiUrls={apiUrls}
-									/>
+							<a class="article-row__link" href={getPostUrlBySlug(post.id)}>
+								{image ? (
+									<div class="article-row__image" aria-hidden="true">
+										<CoverImage
+											src={image}
+											basePath={getFileDirFromPath(post.filePath || "")}
+											alt=""
+											preview={true}
+											apiUrls={apiUrls}
+										/>
+									</div>
+								) : (
+									<div class="article-row__placeholder" aria-hidden="true">
+										<Icon is:inline name="material-symbols:article-outline-rounded" />
+									</div>
+								)}
+								<div class="article-row__body">
+									<h2>{post.data.title}</h2>
+									<div class="article-row__meta">
+										{post.data.category && (
+											<span class="article-row__category">#{post.data.category}</span>
+										)}
+										<span><Icon is:inline name="material-symbols:calendar-month-outline-rounded" />{formatDateToYYYYMMDD(post.data.published)}</span>
+										{post.data.tags.slice(0, 3).map((tag) => <span>{tag}</span>)}
+										{post.data.tags.length > 3 && <span>+{post.data.tags.length - 3}</span>}
+									</div>
+									{post.data.description && <p>{post.data.description}</p>}
 								</div>
-							)}
-							<a class="article-row__body" href={getPostUrlBySlug(post.id)}>
-								<h2>{post.data.title}</h2>
-								<div class="article-row__meta">
-									{post.data.category && (
-										<span class="article-row__category">#{post.data.category}</span>
-									)}
-									<span><Icon is:inline name="material-symbols:calendar-month-outline-rounded" />{formatDateToYYYYMMDD(post.data.published)}</span>
-									{post.data.tags.slice(0, 3).map((tag) => <span>{tag}</span>)}
-									{post.data.tags.length > 3 && <span>+{post.data.tags.length - 3}</span>}
-								</div>
-								{post.data.description && <p>{post.data.description}</p>}
 							</a>
 						</article>
 					);
@@ -89,6 +108,48 @@ const categories = await getCategoryList();
 		<p>当前页面没有目录</p>
 	</aside>
 </section>
+
+<script>
+	const articleViewStorageKey = "firefly:article-library:view";
+
+	function initializeArticleLibrary(): void {
+		document
+			.querySelectorAll<HTMLElement>("[data-article-library]")
+			.forEach((library) => {
+				const root = library.closest<HTMLElement>(".article-list");
+				if (!root) return;
+				const buttons = root.querySelectorAll<HTMLButtonElement>(
+					"[data-article-view-button]",
+				);
+				const applyView = (view: "list" | "grid") => {
+					library.dataset.view = view;
+					buttons.forEach((button) => {
+						button.setAttribute(
+							"aria-pressed",
+							String(button.dataset.articleViewButton === view),
+						);
+					});
+				};
+
+				const saved = localStorage.getItem(articleViewStorageKey);
+				applyView(saved === "grid" ? "grid" : "list");
+				if (library.dataset.viewBound === "true") return;
+				library.dataset.viewBound = "true";
+				buttons.forEach((button) => {
+					button.addEventListener("click", () => {
+						const view =
+							button.dataset.articleViewButton === "grid" ? "grid" : "list";
+						applyView(view);
+						localStorage.setItem(articleViewStorageKey, view);
+					});
+				});
+			});
+	}
+
+	initializeArticleLibrary();
+	document.addEventListener("astro:page-load", initializeArticleLibrary);
+	document.addEventListener("swup:contentReplaced", initializeArticleLibrary);
+</script>
 
 <style>
 	.article-index { display: grid; grid-template-columns: 15.5rem minmax(0, 1fr) 14rem; gap: 2rem; margin-bottom: 1rem; }
@@ -106,16 +167,23 @@ const categories = await getCategoryList();
 	.article-write a { display: flex; align-items: center; justify-content: center; gap: .4rem; min-height: 2.55rem; border-radius: .45rem; background: var(--deep-text); color: var(--card-bg); font-size: .75rem; font-weight: 800; }
 	.article-list { min-width: 0; }
 	.article-list__header { display: flex; align-items: end; justify-content: space-between; gap: 1rem; min-height: 0; padding: .65rem 0 1rem; }
-	.article-list__header span { color: var(--content-meta); font-family: ui-monospace, monospace; font-size: .65rem; font-weight: 750; letter-spacing: .12em; }
+	.article-list__heading > span { color: var(--content-meta); font-family: ui-monospace, monospace; font-size: .65rem; font-weight: 750; letter-spacing: .12em; }
 	.article-list__header h1 { margin: .2rem 0 0; color: var(--deep-text); font-size: 2.7rem; line-height: .95; letter-spacing: -.04em; }
 	.article-list__header p { margin: 0; color: var(--content-meta); font-size: .75rem; white-space: nowrap; }
 	.article-list__header p strong { color: var(--deep-text); font-size: 2rem; line-height: 1; }
+	.article-view-switch { display: inline-flex; gap: .18rem; margin-top: .85rem; padding: .2rem; border-radius: 999px; background: var(--btn-regular-bg); }
+	.article-view-switch button { display: inline-flex; align-items: center; gap: .3rem; min-height: 1.85rem; padding: .25rem .65rem; border-radius: 999px; color: var(--content-meta); font-size: .66rem; font-weight: 800; transition: background-color 180ms ease-out, color 180ms ease-out; }
+	.article-view-switch button[aria-pressed="true"] { background: var(--deep-text); color: var(--card-bg); }
+	.article-view-switch button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+	.article-view-switch :global(svg) { width: .9rem; height: .9rem; }
 	.article-list__items { display: flex; flex-direction: column; gap: .75rem; }
 	.article-row { position: relative; min-height: 9.1rem; overflow: hidden; border: 1px solid color-mix(in oklch, var(--line-divider) 80%, var(--deep-text)); background: var(--card-bg); }
+	.article-row__link { position: relative; display: block; min-height: inherit; color: var(--deep-text); }
 	.article-row__image { position: absolute; inset: 0 0 0 46%; opacity: .46; }
 	.article-row__image::after { position: absolute; inset: 0; content: ""; background: linear-gradient(90deg, var(--card-bg) 0%, color-mix(in oklch, var(--card-bg) 42%, transparent) 58%, transparent 100%); }
 	.article-row__image :global(.cover-image-container) { width: 100%; height: 100%; min-height: 0; }
-	.article-row__body { position: relative; z-index: 1; display: flex; min-height: 9.1rem; flex-direction: column; justify-content: center; padding: 1.15rem 1.35rem; color: var(--deep-text); }
+	.article-row__placeholder { display: none; }
+	.article-row__body { position: relative; z-index: 1; display: flex; min-height: 9.1rem; flex-direction: column; justify-content: center; padding: 1.15rem 1.35rem; }
 	.article-row__body h2 { max-width: 48rem; margin: 0; font-size: 1.08rem; line-height: 1.4; letter-spacing: -.018em; text-wrap: pretty; }
 	.article-row:hover h2 { color: var(--primary); }
 	.article-row__meta { display: flex; flex-wrap: wrap; align-items: center; gap: .45rem .75rem; margin-top: .55rem; color: var(--content-meta); font-size: .68rem; font-weight: 700; }
@@ -123,10 +191,22 @@ const categories = await getCategoryList();
 	.article-row__meta > span:not(:last-child)::after { margin-left: .55rem; color: color-mix(in oklch, var(--content-meta) 45%, transparent); content: "/"; }
 	.article-row__meta .article-row__category { color: var(--primary); }
 	.article-row__body p { display: -webkit-box; overflow: hidden; max-width: 48rem; margin: .55rem 0 0; color: color-mix(in oklch, var(--deep-text) 70%, var(--content-meta)); font-size: .76rem; line-height: 1.55; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+	.article-list__items[data-view="grid"] { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+	.article-list__items[data-view="grid"] .article-row { min-height: 0; }
+	.article-list__items[data-view="grid"] .article-row__link { display: flex; height: 100%; min-height: 20rem; flex-direction: column; }
+	.article-list__items[data-view="grid"] .article-row__image { position: relative; inset: auto; height: 11rem; flex: 0 0 auto; opacity: 1; }
+	.article-list__items[data-view="grid"] .article-row__image::after { background: linear-gradient(to bottom, transparent 50%, var(--card-bg) 100%); }
+	.article-list__items[data-view="grid"] .article-row__placeholder { display: grid; place-items: center; height: 11rem; flex: 0 0 auto; background: color-mix(in oklch, var(--btn-regular-bg) 78%, var(--card-bg)); color: var(--content-meta); font-size: 2.2rem; }
+	.article-list__items[data-view="grid"] .article-row__body { min-height: 0; flex: 1; justify-content: flex-start; padding: 1rem; }
+	.article-list__items[data-view="grid"] .article-row__body h2 { display: -webkit-box; overflow: hidden; font-size: .94rem; line-height: 1.45; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+	.article-list__items[data-view="grid"] .article-row__meta { gap: .4rem .55rem; margin-top: .65rem; font-size: .62rem; }
+	.article-list__items[data-view="grid"] .article-row__meta > span:not(:last-child)::after { margin-left: .35rem; }
+	.article-list__items[data-view="grid"] .article-row__body p { display: none; }
 	.article-toc { padding-top: .65rem; }
 	.article-toc h2 { margin: 0; padding-left: .7rem; border-left: 2px solid var(--deep-text); color: var(--deep-text); font-size: 1rem; }
 	.article-toc p { margin: 2.5rem 0 0; color: var(--content-meta); font-size: .75rem; text-align: center; }
 	@media (max-width: 1200px) { .article-index { grid-template-columns: 15.5rem minmax(0, 1fr); } .article-toc { display: none; } }
+	@media (max-width: 1080px) { .article-list__items[data-view="grid"] { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 	@media (max-width: 900px) { .article-index { grid-template-columns: 1fr; gap: 1rem; } .article-categories { order: 2; } .article-categories__panel { display: none; } .article-write { margin-top: 0; } }
-	@media (max-width: 640px) { .article-list__header h1 { font-size: 2.15rem; } .article-list__header p strong { font-size: 1.55rem; } .article-row, .article-row__body { min-height: 10.5rem; } .article-row__image { left: 25%; } .article-row__body { padding: 1rem; } }
+	@media (max-width: 640px) { .article-list__header h1 { font-size: 2.15rem; } .article-list__header p strong { font-size: 1.55rem; } .article-view-switch button span { display: none; } .article-list__items[data-view="grid"] { grid-template-columns: 1fr; } .article-row, .article-row__body { min-height: 10.5rem; } .article-row__image { left: 25%; } .article-row__body { padding: 1rem; } .article-list__items[data-view="grid"] .article-row__link { min-height: 18rem; } }
 </style>

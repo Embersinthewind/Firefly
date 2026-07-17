@@ -14,10 +14,13 @@ export const getStaticPaths = (async ({ paginate }) => {
 }) satisfies GetStaticPaths;
 
 const { page } = Astro.props;
+const publishedDates = (await getSortedPosts()).map(
+	(post) => post.data.published,
+);
 ---
 
 <MainGridLayout title="文章列表" description="浏览全部文章" contentOnly={true} showCategoryBar={true}>
-	<ArticleLibrary posts={page.data} total={page.total} />
+	<ArticleLibrary posts={page.data} total={page.total} publishedDates={publishedDates} />
 	{
 		page.total > page.size && (
 			<Pagination class="mx-auto onload-animation" page={page} basePath="articles" />

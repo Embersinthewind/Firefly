@@ -24,7 +24,7 @@ Firefly Cloudflare Worker
 | `/` | 个人项目主页，展示 GitHub 项目和能力矩阵 |
 | `/articles/` | 分页文章列表与分类筛选 |
 | `/categories/` | 文章分类 |
-| `/archive/` | 文章归档与热力图 |
+| `/archive/` | 兼容旧分类与标签链接的筛选页，不再显示在文章导航中 |
 | `/write/` | Markdown 写作、导入导出、预览与发布 |
 | `/config/` | 站点、个人资料、项目和写作设置 |
 | `/navigation/` | 网站导航 |
