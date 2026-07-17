@@ -2,7 +2,7 @@
 	"title": "Firefly",
 	"subtitle": "",
 	"siteUrl": "https://yiyu.asia",
-	"description": "Firefly 是一款基于 Astro 框架和 Fuwari 模板开发的清新美观且现代化个人博客主题模板，专为技术爱好者和内容创作者设计。该主题融合了现代 Web 技术栈，提供了丰富的功能模块和高度可定制的界面，让您能够轻松打造出专业且美观的个人博客网站。",
+	"description": "当前仓库 Embersinthewind/Firefly 是基于 CuteLeaf/Firefly 的个人定制分支，并非上游官方发行版。上方预览和使用文档属于上游项目；本仓库的线上站点为 yiyu.asia。\n本分支增加了项目型主页、网站导航、可视化站点配置、文章写作与 GitHub 发布、Cloudflare 作者代理、K-Vault 图床、沉浸式音乐页等功能。部署、密钥和写作流程请阅读 定制版部署与使用指南，变更概览见 定制功能记录。",
 	"keywords": [
 		"Firefly",
 		"Fuwari",
