@@ -15,7 +15,9 @@ import {
 	logoutAuthor,
 	openAuthorLogin,
 	publishAuthorArticle,
+	readAuthorFile,
 	uploadAuthorImage,
+	writeAuthorFile,
 } from "@/utils/author-api";
 
 type UploadResponse = {
@@ -67,7 +69,13 @@ const {
 const today = new Date().toISOString().slice(0, 10);
 let title = $state("");
 let published = $state(today);
-let category = $state(categories[0] || "");
+let availableCategories = $state(
+	Array.from(new Set(categories.map((item) => item.trim()).filter(Boolean))),
+);
+let category = $state(availableCategories[0] || "");
+let showNewCategory = $state(false);
+let newCategoryName = $state("");
+let isSavingCategory = $state(false);
 let tags = $state("");
 let description = $state("");
 let cover = $state("");
@@ -391,10 +399,87 @@ function stringValue(value: unknown) {
 	return typeof value === "string" ? value : value == null ? "" : String(value);
 }
 
+function normalizeCategory(value: string) {
+	return value.trim().replace(/\s+/g, " ");
+}
+
+function handleCategorySelect(event: Event) {
+	const value = (event.currentTarget as HTMLSelectElement).value;
+	if (value === "__new_category__") {
+		showNewCategory = true;
+		newCategoryName = "";
+		return;
+	}
+	category = value;
+	showNewCategory = false;
+}
+
+function parseCategoryFile(content: string): string[] {
+	const data = JSON.parse(content) as { categories?: unknown };
+	if (!Array.isArray(data.categories)) return [];
+	return data.categories
+		.filter((item): item is string => typeof item === "string")
+		.map(normalizeCategory)
+		.filter(Boolean);
+}
+
+async function createArticleCategory() {
+	const name = normalizeCategory(newCategoryName);
+	if (!name) {
+		setStatus("请输入分类名称。", "error");
+		return;
+	}
+	if (name.length > 40) {
+		setStatus("分类名称不能超过 40 个字符。", "error");
+		return;
+	}
+	if (availableCategories.includes(name)) {
+		category = name;
+		showNewCategory = false;
+		setStatus(`已选择分类“${name}”。`, "success");
+		return;
+	}
+	if (!githubAuthorized) {
+		setStatus("请先登录作者模式，再新建分类。", "error");
+		openAuthorLogin(window.location.pathname);
+		return;
+	}
+
+	isSavingCategory = true;
+	setStatus("正在创建分类…");
+	try {
+		const file = await readAuthorFile("articleCategories");
+		const storedCategories = parseCategoryFile(file.content);
+		const nextCategories = Array.from(
+			new Set([...storedCategories, ...availableCategories, name]),
+		);
+		await writeAuthorFile(
+			"articleCategories",
+			`${JSON.stringify({ categories: nextCategories }, null, "\t")}\n`,
+			file.sha,
+		);
+		availableCategories = nextCategories;
+		category = name;
+		newCategoryName = "";
+		showNewCategory = false;
+		setStatus(`分类“${name}”已创建并选中。`, "success");
+	} catch (error) {
+		setStatus(
+			error instanceof Error ? error.message : "新建分类失败。",
+			"error",
+		);
+	} finally {
+		isSavingCategory = false;
+	}
+}
+
 function applyDraft(article: Partial<ArticleDraft>) {
 	title = article.title ?? "";
 	published = article.published ?? today;
-	category = article.category ?? categories[0] ?? "";
+	category = article.category ?? availableCategories[0] ?? "";
+	if (category && !availableCategories.includes(category)) {
+		availableCategories = [...availableCategories, category];
+	}
 	tags = article.tags ?? "";
 	description = article.description ?? "";
 	cover = article.cover ?? "";
@@ -613,8 +698,21 @@ async function publishArticle() {
 			<div class="meta-grid">
 				<label class="meta-wide">文章摘要<textarea bind:value={description} rows="4" placeholder="用于文章列表与 SEO 的简短摘要"></textarea></label>
 				<label>标签<input bind:value={tags} placeholder="使用 # 分隔，例如 #技术 #Astro" /></label>
-				<label>分类<input bind:value={category} list="writer-category-list" placeholder="选择或输入分类" /></label>
-				<datalist id="writer-category-list">{#each categories as item}<option value={item}></option>{/each}</datalist>
+				<label class="category-field">
+					分类
+					<select value={category} onchange={handleCategorySelect} aria-label="选择或新建分类">
+						{#if !category}<option value="" disabled>选择分类</option>{/if}
+						{#each availableCategories as item}<option value={item}>{item}</option>{/each}
+						<option value="__new_category__">＋ 新建分类…</option>
+					</select>
+				</label>
+				{#if showNewCategory}
+					<div class="category-create-inline">
+						<input bind:value={newCategoryName} maxlength="40" placeholder="输入新分类名称" onkeydown={(event) => { if (event.key === "Enter") { event.preventDefault(); void createArticleCategory(); } }} />
+						<button type="button" onclick={createArticleCategory} disabled={isSavingCategory}>{isSavingCategory ? "创建中…" : "创建"}</button>
+						<button type="button" class="category-create-cancel" onclick={() => (showNewCategory = false)} aria-label="取消新建分类">×</button>
+					</div>
+				{/if}
 				<label>发布日期<input type="date" bind:value={published} /></label>
 				<div class="cover-control">
 					<span>封面图片</span>
@@ -675,7 +773,11 @@ async function publishArticle() {
 
 	.meta-grid { display: flex; flex-direction: column; gap: .8rem; padding-top: 1rem; }
 	.meta-grid > label { display: grid; gap: .35rem; min-width: 0; color: var(--deep-text); font-size: .69rem; font-weight: 800; }
-	.meta-grid input, .meta-grid textarea { box-sizing: border-box; width: 100%; min-height: 2.45rem; padding: .52rem .62rem; border: 1px solid var(--line-divider); border-radius: .45rem; background: var(--card-bg); color: var(--deep-text); font: inherit; font-size: .73rem; line-height: 1.55; outline: none; resize: vertical; }
+	.meta-grid input, .meta-grid textarea, .meta-grid select { box-sizing: border-box; width: 100%; min-height: 2.45rem; padding: .52rem .62rem; border: 1px solid var(--line-divider); border-radius: .45rem; background: var(--card-bg); color: var(--deep-text); font: inherit; font-size: .73rem; line-height: 1.55; outline: none; resize: vertical; }
+	.meta-grid select { cursor: pointer; }
+	.category-create-inline { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: .35rem; padding: .55rem; border: 1px solid color-mix(in oklch, var(--primary) 32%, var(--line-divider)); border-radius: .55rem; background: color-mix(in oklch, var(--primary) 5%, var(--card-bg)); }
+	.category-create-inline button { min-height: 2.45rem; border-color: var(--primary); background: var(--primary); color: oklch(.18 .02 var(--hue)); }
+	.category-create-inline .category-create-cancel { width: 2.45rem; padding: 0; border-color: var(--line-divider); background: var(--card-bg); color: var(--content-meta); font-size: 1rem; }
 	.meta-grid textarea { min-height: 5.5rem; }
 	.meta-grid input::placeholder, .meta-grid textarea::placeholder, .markdown-editor::placeholder { color: color-mix(in oklch, var(--content-meta) 72%, transparent); opacity: 1; }
 	.cover-control { display: grid; gap: .4rem; min-width: 0; }

@@ -1,4 +1,9 @@
-export type AuthorFileKey = "site" | "profile" | "portfolio" | "navigation";
+export type AuthorFileKey =
+	| "site"
+	| "profile"
+	| "portfolio"
+	| "navigation"
+	| "articleCategories";
 
 export type AuthorSession = {
 	authorized: true;

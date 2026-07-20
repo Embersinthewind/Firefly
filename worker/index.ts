@@ -12,6 +12,7 @@ type Env = {
 	GITHUB_PROFILE_PATH?: string;
 	GITHUB_PORTFOLIO_PATH?: string;
 	GITHUB_NAVIGATION_PATH?: string;
+	GITHUB_ARTICLE_CATEGORIES_PATH?: string;
 	GITHUB_POSTS_DIR?: string;
 	GITHUB_WALLPAPER_DIR?: string;
 	GITHUB_MOBILE_WALLPAPER_DIR?: string;
@@ -273,6 +274,9 @@ function repositoryPaths(env: Env): Record<string, string> {
 		portfolio: env.GITHUB_PORTFOLIO_PATH?.trim() || "src/data/portfolio.json",
 		navigation:
 			env.GITHUB_NAVIGATION_PATH?.trim() || "src/data/navigation.json",
+		articleCategories:
+			env.GITHUB_ARTICLE_CATEGORIES_PATH?.trim() ||
+			"src/data/article-categories.json",
 	};
 }
 
@@ -883,7 +887,7 @@ async function handleAuthorApi(request: Request, env: Env): Promise<Response> {
 		});
 	}
 	const fileMatch = path.match(
-		/^\/files\/(site|profile|portfolio|navigation)$/,
+		/^\/files\/(site|profile|portfolio|navigation|articleCategories)$/,
 	);
 	if (fileMatch && request.method === "GET")
 		return readRepositoryFile(env, fileMatch[1]);
