@@ -3,11 +3,9 @@ title: Java复习Day1
 published: 2026-07-21
 draft: false
 pinned: false
-description: 复习Java
-image: ""
-tags:
-  - Java
-  - SpringBoot
+description: Java复习
+image: https://k-vault-ae1.pages.dev/file/BQACAgEAAyEGAAMBBEfp4AADJGpfhyDZwb5HegaZaTg6nfSXOJiOAAJKCQAC4j8BR5K7Ey95qRFbPQQ.png
+tags: []
 category: Java复习
 ---
 
